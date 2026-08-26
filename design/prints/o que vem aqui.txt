@@ -1,0 +1,1 @@
+prints das telas a medida que ficam prontas 
