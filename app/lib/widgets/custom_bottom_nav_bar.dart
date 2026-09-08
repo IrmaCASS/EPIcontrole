@@ -42,9 +42,9 @@ class CustomBottomNavBar extends StatelessWidget {
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: const [
               NavigationDestination(
-                icon: Icon(Icons.book_outlined),
-                selectedIcon: Icon(Icons.book),
-                label: 'Diário',
+                icon: Icon(Icons.medical_services_outlined),
+                selectedIcon: Icon(Icons.medical_services),
+                label: 'Remédios',
               ),
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),
@@ -52,9 +52,9 @@ class CustomBottomNavBar extends StatelessWidget {
                 label: 'Início',
               ),
               NavigationDestination(
-                icon: Icon(Icons.medical_services_outlined),
-                selectedIcon: Icon(Icons.medical_services),
-                label: 'Remédios',
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Configurações',
               ),
             ],
           ),

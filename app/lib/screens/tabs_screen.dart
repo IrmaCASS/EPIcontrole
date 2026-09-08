@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/home_screen.dart';
-import 'package:app/screens/diario_screen.dart';
 import 'package:app/screens/medicamento_screen.dart';
+import 'package:app/screens/configuracoes_screen.dart';
 
 import 'package:app/widgets/custom_bottom_nav_bar.dart';
 import 'package:app/widgets/main_drawer.dart';
@@ -31,18 +31,18 @@ class TabsScreen extends ConsumerWidget {
     final selectedIndex = ref.watch(tabIndexProvider);
 
     // -Definição da ordem das telas
-    // Índices: 0 = (Diário), 1 = (Home), 2 = (Medicamentos)
+    // Índices: 0 = (Remédios), 1 = (Início), 2 = (Configurações)
     final List<Widget> screens = const [
-      DiarioScreen(),      // Índice 0:
-      HomeScreen(),        // Índice 1: (Tela inicial)
-      MedicamentoScreen(), // Índice 2:
+      MedicamentoScreen(),  // Índice 0:
+      HomeScreen(),         // Índice 1: (Tela inicial)
+      ConfiguracoesScreen(),// Índice 2:
     ];
 
     // -Títulos dinâmicos que acompanham a mudança de abas
     final List<String> titles = [
-      'Diário de Crises',
+      'Remédios',
       'EpiControle',
-      'Medicamentos',
+      'Configurações',
     ];
 
     return Scaffold(
@@ -59,14 +59,6 @@ class TabsScreen extends ConsumerWidget {
             Text(titles[selectedIndex]),
           ],
         ),
-        actions: [
-          // Futuro: Adicionar ícone de notificações ou atalhos rápidos aqui
-          //exemplo
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-          ),
-        ],
       ),
 
       // Drawer ( menu lateral )
