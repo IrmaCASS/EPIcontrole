@@ -5,17 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class CriseState {
   final bool isActive;
   final int secondsElapsed;
+  final int lastCrisisDuration;
 
   CriseState({
     this.isActive = false,
     this.secondsElapsed = 0,
+    this.lastCrisisDuration = 0,
   });
 
   // Metodo auxiliar para atualizar o estado mantendo o que não mudou
-  CriseState copyWith({bool? isActive, int? secondsElapsed}) {
+  CriseState copyWith({
+    bool? isActive,
+    int? secondsElapsed,
+    int? lastCrisisDuration,
+  }) {
     return CriseState(
       isActive: isActive ?? this.isActive,
       secondsElapsed: secondsElapsed ?? this.secondsElapsed,
+      lastCrisisDuration: lastCrisisDuration ?? this.lastCrisisDuration,
     );
   }
 }
@@ -63,13 +70,19 @@ class CriseNotifier extends Notifier<CriseState> {
   void _stopCrisis() {
     _timer?.cancel();
 
-    final duracaoFinal = state.secondsElapsed; //armazena tempo decorrido
+    // Armazena a duração final da crise (em segundos) para o back end persistir.
+    final duracaoFinal = state.secondsElapsed;
 
     // TODO: Parar a reprodução do AudioService
-    // TODO: Chamar o DatabaseService/Repository para salvar a nova crise no SQLite com a duracaoFinal
+    // TODO: Chamar o DatabaseService/Repository para salvar a nova crise no SQLite
+    // usando o último estado (isActive, duracaoFinal) como contrato de dados.
 
-    // Reseta o estado para inativo
-    state = state.copyWith(isActive: false, secondsElapsed: 0);
+    // Guarda a duração no estado para futura persistência/navegação.
+    state = state.copyWith(
+      isActive: false,
+      secondsElapsed: 0,
+      lastCrisisDuration: duracaoFinal,
+    );
   }
 }
 

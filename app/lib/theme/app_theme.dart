@@ -6,6 +6,11 @@ class AppTheme {
   static const Color accentLilac = Color(0xFFA389D3); // Lilás (Lavanda)
   static const Color backgroundLight = Color(0xFFF2F2F2); // Cinza Claro (Branco Gelo)
 
+  // --- Paleta do Botão de Crise ---
+  static const Color kLavanda = Color(0xFFA389D3); // Lavanda (botão em repouso)
+  static const Color kRoxoEscuro = Color(0xFF5B3089); // Roxo Escuro (crise ativa)
+  static const Color kBrancoAcizentado = Color(0xFFF2F2F2); // Branco Acinzentado (fade out)
+
   // Cor mantida para bordas inativas muito suaves (opcional)
   static const Color cardBorderLight = Color(0xFFEBE4F2);
 
