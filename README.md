@@ -4,6 +4,19 @@ Aplicativo de autocuidado para pessoas com epilepsia. Permite registrar crises p
 
 > Status atual: **esqueleto do sistema** + **Botão de Crise** (navegação e telas de mock em branco). A lógica de negócio e a persistência (banco de dados) ainda serão implementadas pelo time de back end.
 
+## Implementação da tela principal + botão de crise
+
+Nesta etapa foi implementada a **tela principal (Home)** e o **Botão de Crise** com suas animações e navegação:
+
+- **Tela principal (Home):** contém o Botão de Crise centralizado e o **Menu Principal** com os cards `Relatórios` e `Registrar Nova Crise`, que abrem **páginas de mock (em branco)** com animação do tipo **pop up**.
+- **Botão de Crise:**
+  - Ocupa **60% da largura da tela** em repouso e **cresce para ~75%** (70–80%) quando a crise é iniciada.
+  - Cores da paleta: `kLavanda` (repouso) e `kRoxoEscuro` (crise ativa).
+  - Ao ser clicado, apresenta um **flash de fade out** em `kBrancoAcizentado`, **anéis expansivos** ao redor do botão nas cores da paleta (`kLavanda`, `kRoxoEscuro`, `kBrancoAcizentado`) e **animação de pulsação** (escala contínua).
+  - Cronômetro em **MM:SS**, com **limite de 5 minutos**; novo toque encerra antes do limite. Ao encerrar, navega direto para o **Diário de Crise** (mock).
+- **Navegação:** as abas inferiores são `Remédios`, `Início` (botão de crise) e `Configurações`. No **menu hambúrguer**, a opção `Início` leva à tela do Botão de Crise (mesma aba do NavBar) e as demais opções levam a páginas de mock.
+- **Usabilidade:** quando o botão de crise é clicado e cresce/pulsa, o espaço para o **Menu Principal** é ampliado para que os cards não sejam encobertos pela barra de navegação inferior.
+
 ## Tecnologias
 
 - **Flutter** (Dart) — app mobile (Android/iOS)
