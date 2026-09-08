@@ -5,7 +5,11 @@ import 'package:app/screens/mock_screen.dart';
 /// Contém as opções das telas principais; todas levam para páginas de mock
 /// (em branco) até que a lógica de negócio seja implementada.
 class MainDrawer extends StatelessWidget {
-  const MainDrawer({super.key});
+  // Callback acionado pela opção "Início", para navegar à aba do Botão de
+  // Crise da mesma forma que o NavBar.
+  final VoidCallback? onSelectInicio;
+
+  const MainDrawer({super.key, this.onSelectInicio});
 
   // Fecha o drawer e navega para a página de mock correspondente.
   void _navigateToMock(BuildContext context, String title) {
@@ -20,7 +24,9 @@ class MainDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -37,7 +43,10 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.home_outlined),
             title: const Text('Início'),
-            onTap: () => _navigateToMock(context, 'Início'),
+            onTap: () {
+              Navigator.pop(context); // Fecha o drawer
+              onSelectInicio?.call(); // Vai para a aba do Botão de Crise
+            },
           ),
           ListTile(
             leading: const Icon(Icons.book_outlined),

@@ -18,6 +18,7 @@ class TabIndexNotifier extends Notifier<int> {
     state = novoIndice;
   }
 }
+
 final tabIndexProvider = NotifierProvider<TabIndexNotifier, int>(() {
   return TabIndexNotifier();
 });
@@ -33,17 +34,13 @@ class TabsScreen extends ConsumerWidget {
     // -Definição da ordem das telas
     // Índices: 0 = (Remédios), 1 = (Início), 2 = (Configurações)
     final List<Widget> screens = const [
-      MedicamentoScreen(),  // Índice 0:
-      HomeScreen(),         // Índice 1: (Tela inicial)
-      ConfiguracoesScreen(),// Índice 2:
+      MedicamentoScreen(), // Índice 0:
+      HomeScreen(), // Índice 1: (Tela inicial)
+      ConfiguracoesScreen(), // Índice 2:
     ];
 
     // -Títulos dinâmicos que acompanham a mudança de abas
-    final List<String> titles = [
-      'Remédios',
-      'EpiControle',
-      'Configurações',
-    ];
+    final List<String> titles = ['Remédios', 'EpiControle', 'Configurações'];
 
     return Scaffold(
       // AppBar, caso no futuro queira-se uma barra mais personalizavel talvez seja
@@ -62,23 +59,25 @@ class TabsScreen extends ConsumerWidget {
       ),
 
       // Drawer ( menu lateral )
-      drawer: const MainDrawer(),
+      // A opção "Início" seleciona a aba do Botão de Crise (Início), como no NavBar.
+      drawer: MainDrawer(
+        onSelectInicio: () {
+          ref.read(tabIndexProvider.notifier).mudarAba(1);
+        },
+      ),
 
       // Corpo usando IndexedStack
       // Isso garante que o estado das abas não mude caso mude para outra e volte.
-      body: IndexedStack(
-        index: selectedIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: selectedIndex, children: screens),
 
       // Bottom Navigation Bar
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: selectedIndex,
         onSelect: (index) {
           // Atualiza o índice globalmente via Riverpod
-          ref.read(tabIndexProvider.notifier).mudarAba(index);        },
+          ref.read(tabIndexProvider.notifier).mudarAba(index);
+        },
       ),
     );
   }
 }
-
