@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/widgets/botao_de_crise.dart';
 import 'package:app/widgets/menu_card.dart';
-import 'package:app/theme/app_theme.dart';
+import 'package:app/screens/mock_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -43,31 +43,13 @@ class HomeScreen extends StatelessWidget {
             mainAxisSpacing: 16, // Espaçamento vertical entre os cards
             childAspectRatio: 1.5, // Proporção de tamanho entre largura e altura dos cards
             children: [
-              // MenuCard(
-              //   title: 'Diário de\nCrises',
-              //   icon: Icons.menu_book,
-              //   iconColor: AppTheme.primaryPurple, // Cor principal do tema para o ícone
-              //   iconBackgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.1), // Fundo translúcido com opacidade
-              //   onTap: () {
-              //     // TODO: Implementar navegação para a tela do Diário de Crises
-              //   },
-              // ),
-              // MenuCard(
-              //   title: 'Diário de\nMedicamentos',
-              //   icon: Icons.medication_outlined,
-              //   iconColor: const Color(0xFF2D9CDB), // Cor azul customizada de destaque
-              //   iconBackgroundColor: const Color(0xFF2D9CDB).withValues(alpha: 0.1),
-              //   onTap: () {
-              //     // TODO: Implementar navegação para a tela de Medicamentos
-              //   },
-              // ),
               MenuCard(
                 title: 'Relatórios',
                 icon: Icons.bar_chart,
                 iconColor: const Color(0xFF27AE60), // Cor verde customizada de destaque
                 iconBackgroundColor: const Color(0xFF27AE60).withValues(alpha: 0.1),
                 onTap: () {
-                  // TODO: Implementar navegação para a tela de Relatórios
+                  Navigator.of(context).push(MockScreen.route('Relatórios'));
                 },
               ),
               MenuCard(
@@ -76,7 +58,7 @@ class HomeScreen extends StatelessWidget {
                 iconColor: const Color(0xFF4F4F4F), // Cor cinza customizada para ajustes
                 iconBackgroundColor: const Color(0xFFF4C033).withValues(alpha: 0.3),
                 onTap: () {
-                  // TODO: Implementar navegação para a tela de Configurações/Perfil
+                  Navigator.of(context).push(MockScreen.route('Registrar Nova Crise'));
                 },
               ),
             ],
