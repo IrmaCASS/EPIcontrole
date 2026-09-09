@@ -1,0 +1,63 @@
+class Crise {
+  final int? idCrise;
+  final int idPaciente;
+  final DateTime dataHoraInicio;
+  final int duracaoSegundos;
+  final String? tipoCrise;
+  final String? turno;
+  final String? sintomas;
+  final String? prodromosAuras;
+  final String? desencadeantes;
+  final String? estadoPosIctal;
+  final String? atividadeAntesCrise;
+  final String? anotacoes;
+
+  Crise({
+    this.idCrise,
+    required this.idPaciente,
+    required this.dataHoraInicio,
+    required this.duracaoSegundos,
+    this.tipoCrise,
+    this.turno,
+    this.sintomas,
+    this.prodromosAuras,
+    this.desencadeantes,
+    this.estadoPosIctal,
+    this.atividadeAntesCrise,
+    this.anotacoes,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (idCrise != null) 'id_crise': idCrise,
+      'id_paciente': idPaciente,
+      'data_hora_inicio': dataHoraInicio.toIso8601String(),
+      'duracao_segundos': duracaoSegundos,
+      'tipo_crise': tipoCrise,
+      'turno': turno,
+      'sintomas': sintomas,
+      'prodromos_auras': prodromosAuras,
+      'desencadeantes': desencadeantes,
+      'estado_pos_ictal': estadoPosIctal,
+      'atividade_antes_crise': atividadeAntesCrise,
+      'anotacoes': anotacoes,
+    };
+  }
+
+  factory Crise.fromMap(Map<String, dynamic> map) {
+    return Crise(
+      idCrise: map['id_crise'] as int?,
+      idPaciente: map['id_paciente'] as int,
+      dataHoraInicio: DateTime.parse(map['data_hora_inicio'] as String),
+      duracaoSegundos: map['duracao_segundos'] as int,
+      tipoCrise: map['tipo_crise'] as String?,
+      turno: map['turno'] as String?,
+      sintomas: map['sintomas'] as String?,
+      prodromosAuras: map['prodromos_auras'] as String?,
+      desencadeantes: map['desencadeantes'] as String?,
+      estadoPosIctal: map['estado_pos_ictal'] as String?,
+      atividadeAntesCrise: map['atividade_antes_crise'] as String?,
+      anotacoes: map['anotacoes'] as String?,
+    );
+  }
+}

@@ -1,0 +1,43 @@
+import '../database/database_helper.dart';
+import '../models/crise_model.dart';
+
+class CriseRepository {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // RF1 e RF2: Salvar Crise (Rápida ou Detalhada)
+  Future<int> inserirCrise(Crise crise) async {
+    final db = await _dbHelper.database;
+    return await db.insert('crise', crise.toMap());
+  }
+
+  // RF3: Consultar últimas crises ordenadas da mais recente para a mais antiga
+  Future<List<Crise>> buscarUltimasCrises({int limite = 5}) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'crise',
+      orderBy: 'data_hora_inicio DESC',
+      limit: limite,
+    );
+
+    return result.map((map) => Crise.fromMap(map)).toList();
+  }
+
+  // RF19: Contar crises dos últimos 7 dias para geração de relatórios
+  Future<int> contarCrisesUltimos7Dias() async {
+    final db = await _dbHelper.database;
+    
+    // Subtrai 7 dias da data atual
+    final seteDiasAtras = DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) AS total 
+      FROM crise 
+      WHERE data_hora_inicio >= ?
+    ''', [seteDiasAtras]);
+
+    if (result.isNotEmpty) {
+      return result.first['total'] as int? ?? 0;
+    }
+    return 0;
+  }
+}
