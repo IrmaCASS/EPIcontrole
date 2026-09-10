@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/crise_model.dart';
+import '../repositories/crise_repository.dart';
 
-// Classe de Estado: Guarda as variáveis que a tela precisa ler
 class CriseState {
   final bool isActive;
   final int secondsElapsed;
@@ -13,7 +14,6 @@ class CriseState {
     this.lastCrisisDuration = 0,
   });
 
-  // Metodo auxiliar para atualizar o estado mantendo o que não mudou
   CriseState copyWith({
     bool? isActive,
     int? secondsElapsed,
@@ -27,57 +27,56 @@ class CriseState {
   }
 }
 
-// Notifier: Contém a lógica de negócio (Cronômetro, Salvar DB, SMS)
 class CriseNotifier extends Notifier<CriseState> {
+  final CriseRepository _criseRepository = CriseRepository();
   Timer? _timer;
+  DateTime? _inicioCrise;
 
-  // Tempo limite de segurança de 5 minutos (300 segundos)
   final int _maxCrisisDuration = 300;
 
   @override
   CriseState build() {
-    // Estado inicial: crise inativa, 0 segundos
     return CriseState();
   }
 
-  // Função principal chamada pelo Botão
-  void toggleCrise() {
+  Future<void> toggleCrise() async {
     if (state.isActive) {
-      _stopCrisis();
+      await _stopCrisis();
     } else {
       _startCrisis();
     }
   }
 
   void _startCrisis() {
-    // Muda o estado para ativo
+    _inicioCrise = DateTime.now();
     state = state.copyWith(isActive: true, secondsElapsed: 0);
 
-    // TODO: Chamar AlertaService para enviar SMS ou GPS aos contatos
-    // TODO: Chamar AudioService para tocar o alarme sonoro local
-
-    // Inicia o cronômetro
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       state = state.copyWith(secondsElapsed: state.secondsElapsed + 1);
 
-      // Interrupção automática ao atingir tempo limite
       if (state.secondsElapsed >= _maxCrisisDuration) {
         _stopCrisis();
       }
     });
   }
 
-  void _stopCrisis() {
+  Future<void> _stopCrisis() async {
+    if (!state.isActive) return;
+
     _timer?.cancel();
-
-    // Armazena a duração final da crise (em segundos) para o back end persistir.
     final duracaoFinal = state.secondsElapsed;
+    final inicio = _inicioCrise ?? DateTime.now();
 
-    // TODO: Parar a reprodução do AudioService
-    // TODO: Chamar o DatabaseService/Repository para salvar a nova crise no SQLite
-    // usando o último estado (isActive, duracaoFinal) como contrato de dados.
+    final crise = Crise(
+      idPaciente: 1,
+      dataHoraInicio: inicio,
+      duracaoSegundos: duracaoFinal,
+    );
 
-    // Guarda a duração no estado para futura persistência/navegação.
+    try {
+      await _criseRepository.inserirCrise(crise);
+    } catch (_) {}
+
     state = state.copyWith(
       isActive: false,
       secondsElapsed: 0,
@@ -86,7 +85,6 @@ class CriseNotifier extends Notifier<CriseState> {
   }
 }
 
-// variável global do Provider que será lida pela tela
 final criseProvider = NotifierProvider<CriseNotifier, CriseState>(() {
   return CriseNotifier();
 });

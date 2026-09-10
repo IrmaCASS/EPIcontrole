@@ -130,3 +130,22 @@ flutter run          # escolha um dispositivo (ex.: emulador Android)
 ```
 
 Build de debug: `flutter build apk --debug` → `app/build/app/outputs/flutter-apk/app-debug.apk`
+
+## implementando o CRUD do banco de dados
+
+Nesta etapa foi implementado o **CRUD do banco de dados** para as entidades atuais (`paciente` e `crise`) e a **integração do Botão de Crise com o SQLite**:
+
+### Estrutura adicionada
+
+- `app/lib/models/paciente_model.dart` — modelo da entidade `Paciente` (`toMap`, `fromMap`, `copyWith`).
+- `app/lib/models/crise_model.dart` — modelo da entidade `Crise` (`toMap`, `fromMap`, `copyWith`).
+- `app/lib/database/database_helper.dart` — conexão com o SQLite (`epicontrole.db`), criação das tabelas `paciente` e `crise`, `PRAGMA foreign_keys = ON` e seed do usuário de teste (id 1).
+- `app/lib/repositories/paciente_repository.dart` — CRUD completo de `Paciente` (`inserirPaciente`, `buscarPacientePorId`, `buscarPacientePorEmail`, `buscarTodos`, `atualizarPaciente`, `excluirPaciente`).
+- `app/lib/repositories/crise_repository.dart` — CRUD completo de `Crise` (`inserirCrise`, `buscarCrisePorId`, `buscarTodasCrises`, `buscarUltimasCrises`, `atualizarCrise`, `excluirCrise`, `contarCrisesUltimos7Dias`).
+- Removidos os esboços `.txt` de `models/` e `database/`.
+- `pubspec.yaml` — adicionadas as dependências `sqflite ^2.3.0` e `path ^1.9.0`.
+
+### Integração com o Botão de Crise
+
+- `app/lib/providers/botao_crise_provider.dart` agora registra o **início da crise** (`data_hora_inicio`) e, ao encerrar (novo toque **ou** limite de 5 minutos), persiste a crise no SQLite por meio de `CriseRepository.inserirCrise`, atribuindo a crise ao **usuário de teste (id 1)**.
+- O fluxo do cronômetro (iniciar/parar/limite) permanece o que já existia.
