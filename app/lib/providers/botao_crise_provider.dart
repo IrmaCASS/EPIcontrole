@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/models/crise_model.dart';
+import 'package:app/repositories/crise_repository.dart';
 
 // Classe de Estado: Guarda as variáveis que a tela precisa ler
 class CriseState {
@@ -13,7 +15,6 @@ class CriseState {
     this.lastCrisisDuration = 0,
   });
 
-  // Metodo auxiliar para atualizar o estado mantendo o que não mudou
   CriseState copyWith({
     bool? isActive,
     int? secondsElapsed,
@@ -31,16 +32,16 @@ class CriseState {
 class CriseNotifier extends Notifier<CriseState> {
   Timer? _timer;
 
+  final _criseRepository = CriseRepository();
+
   // Tempo limite de segurança de 5 minutos (300 segundos)
   final int _maxCrisisDuration = 300;
 
   @override
   CriseState build() {
-    // Estado inicial: crise inativa, 0 segundos
     return CriseState();
   }
 
-  // Função principal chamada pelo Botão
   void toggleCrise() {
     if (state.isActive) {
       _stopCrisis();
@@ -50,34 +51,39 @@ class CriseNotifier extends Notifier<CriseState> {
   }
 
   void _startCrisis() {
-    // Muda o estado para ativo
     state = state.copyWith(isActive: true, secondsElapsed: 0);
 
-    // TODO: Chamar AlertaService para enviar SMS ou GPS aos contatos
-    // TODO: Chamar AudioService para tocar o alarme sonoro local
-
-    // Inicia o cronômetro
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       state = state.copyWith(secondsElapsed: state.secondsElapsed + 1);
 
-      // Interrupção automática ao atingir tempo limite
       if (state.secondsElapsed >= _maxCrisisDuration) {
         _stopCrisis();
       }
     });
   }
 
-  void _stopCrisis() {
+  Future<void> _stopCrisis() async {
     _timer?.cancel();
 
-    // Armazena a duração final da crise (em segundos) para o back end persistir.
     final duracaoFinal = state.secondsElapsed;
 
-    // TODO: Parar a reprodução do AudioService
-    // TODO: Chamar o DatabaseService/Repository para salvar a nova crise no SQLite
-    // usando o último estado (isActive, duracaoFinal) como contrato de dados.
+    // Salva a crise no banco (só se durou pelo menos 1 segundo)
+    if (duracaoFinal > 0) {
+      try {
+        final novaCrise = CriseModel(
+          dataHoraInicio: DateTime.now().subtract(
+            Duration(seconds: duracaoFinal),
+          ),
+          duracao: Duration(seconds: duracaoFinal),
+        );
+        await _criseRepository.inserirCrise(novaCrise);
+      } catch (e) {
+        // Se der erro no banco, não deixa o app travar
+        // ignore: avoid_print
+        print('Erro ao salvar crise: $e');
+      }
+    }
 
-    // Guarda a duração no estado para futura persistência/navegação.
     state = state.copyWith(
       isActive: false,
       secondsElapsed: 0,

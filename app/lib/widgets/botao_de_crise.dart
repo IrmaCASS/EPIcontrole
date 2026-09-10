@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/providers/botao_crise_provider.dart';
-import 'package:app/screens/mock_screen.dart';
+import 'package:app/screens/diario_screen.dart';
 import 'package:app/theme/app_theme.dart';
 
 // ConsumerWidget possui a capacidade de "escutar" os Providers do Riverpod e se reconstruir automaticamente
@@ -92,12 +92,12 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
     final secondsElapsed = criseState.secondsElapsed;
 
     // Ao encerrar a crise (manual ou pelo limite de 5 minutos), navega direto
-    // para o Diário de Crises (mock).
+    // para o Diário de Crises.
     ref.listen(criseProvider, (previous, next) {
       if (previous != null && previous.isActive && !next.isActive) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          Navigator.of(context).push(MockScreen.route('Diário de Crise'));
+          Navigator.of(context).push(DiarioScreen.route());
         });
       }
     });

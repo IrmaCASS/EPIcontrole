@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Backups locais
+backup_mesclagem/
+
+# Bancos de teste locais
+banco_teste*.db
+*.db-journal
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Flutter/Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
