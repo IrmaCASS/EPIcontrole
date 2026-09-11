@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
 import '../models/paciente_model.dart';
@@ -11,10 +12,14 @@ import '../models/paciente_model.dart';
 ///   assim que o banco é criado — ver DatabaseHelper._createDB.
 /// - RF20 (Backup em nuvem): criar conta com e-mail/senha é OPCIONAL.
 class PacienteRepository {
-  final _dbHelper = DatabaseHelper.instance;
+  final Future<Database> Function() _databaseProvider;
+
+  PacienteRepository({Future<Database> Function()? databaseProvider})
+      : _databaseProvider =
+            databaseProvider ?? (() => DatabaseHelper.instance.database);
 
   Future<PacienteModel> buscarPacienteLocal() async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     final result = await db.query(
       'paciente',
       where: 'id_paciente = ?',
@@ -25,7 +30,7 @@ class PacienteRepository {
   }
 
   Future<int> atualizarPaciente(PacienteModel paciente) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     return await db.update(
       'paciente',
       paciente.toMap(),
@@ -40,7 +45,7 @@ class PacienteRepository {
     required String email,
     required String senha,
   }) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     return await db.update(
       'paciente',
       {

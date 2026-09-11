@@ -1,13 +1,19 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../database/database_helper.dart';
 import '../models/crise_model.dart';
 
 /// Camada de acesso a dados das crises (RF1 a RF4, RF6, RF9, base do RF19).
 class CriseRepository {
-  final _dbHelper = DatabaseHelper.instance;
+  final Future<Database> Function() _databaseProvider;
+
+  CriseRepository({Future<Database> Function()? databaseProvider})
+      : _databaseProvider =
+            databaseProvider ?? (() => DatabaseHelper.instance.database);
 
   /// RF1 — registro rápido: salva só data/hora + duração, sem detalhamento.
   Future<int> inserirCrise(CriseModel crise) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     return await db.insert('crise', crise.toMap());
   }
 
@@ -18,7 +24,7 @@ class CriseRepository {
         'atualizarCrise precisa de um idCrise — use inserirCrise para criar.',
       );
     }
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     return await db.update(
       'crise',
       crise.toMap(),
@@ -29,7 +35,7 @@ class CriseRepository {
 
   /// RF4 — exclusão de um registro de crise.
   Future<int> excluirCrise(int idCrise) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     return await db.delete(
       'crise',
       where: 'id_crise = ?',
@@ -38,7 +44,7 @@ class CriseRepository {
   }
 
   Future<CriseModel?> buscarCrisePorId(int idCrise) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     final result = await db.query(
       'crise',
       where: 'id_crise = ?',
@@ -51,7 +57,7 @@ class CriseRepository {
 
   /// Usado na Home para mostrar a lista de crises recentes.
   Future<List<CriseModel>> buscarUltimasCrises({int limite = 5}) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     final result = await db.query(
       'crise',
       orderBy: 'data_hora_inicio DESC',
@@ -65,7 +71,7 @@ class CriseRepository {
     required DateTime inicio,
     required DateTime fim,
   }) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     final result = await db.query(
       'crise',
       where: 'data_hora_inicio BETWEEN ? AND ?',
@@ -80,7 +86,7 @@ class CriseRepository {
     required DateTime inicio,
     required DateTime fim,
   }) async {
-    final db = await _dbHelper.database;
+    final db = await _databaseProvider();
     final result = await db.rawQuery(
       'SELECT COUNT(*) as total FROM crise WHERE data_hora_inicio BETWEEN ? AND ?',
       [inicio.toIso8601String(), fim.toIso8601String()],
