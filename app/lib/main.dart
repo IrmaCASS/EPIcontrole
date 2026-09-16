@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/screens/tabs_screen.dart';
+import 'package:app/database/database_helper.dart';
 
-void main() {
-  // Garante que as ligações do Flutter estejam prontas caso vá inicializar o banco antes
-  //WidgetsFlutterBinding.ensureInitialized();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Força o banco a ser criado/aberto assim que o app inicia.
+  // Sem isso, o banco só nasce quando alguém usa um repositório.
+  await DatabaseHelper.instance.database;
+
   runApp(
     const ProviderScope(
-        child: MyApp(),
+      child: MyApp(),
     ),
   );
 }

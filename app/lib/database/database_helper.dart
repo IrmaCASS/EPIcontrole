@@ -21,7 +21,8 @@ class DatabaseHelper {
 
   // v1 = Sprint 1 (Botão de Crise: paciente + crise sem atividade_antes_crise)
   // v2 = Sprint 2 (Diário de Crises: + coluna atividade_antes_crise)
-  static const int _dbVersion = 2;
+  // v3 = Sprint 3 (Contatos de Emergência: + tabela contato_emergencia)
+  static const int _dbVersion = 3;
   static const String _dbFileName = 'epicontrole.db';
 
   Future<Database> get database async {
@@ -51,6 +52,7 @@ class DatabaseHelper {
   Future<void> _createDB(Database db, int version) async {
     await db.execute(AppDatabaseTables.paciente);
     await db.execute(AppDatabaseTables.crise);
+    await db.execute(AppDatabaseTables.contatoEmergencia);
 
     // Paciente local único (v1 = app sem login/nuvem, RNF06).
     // Importante: usa o datetime() do próprio SQLite.
@@ -66,6 +68,10 @@ class DatabaseHelper {
       // Sprint 2 — tela "Diário de Crises": campo "Você estava?"
       await db.execute(AppDatabaseTables.addColunaAtividadeAntesCrise);
     }
+    if (oldVersion < 3) {
+        // Sprint 3 — tela "Contatos de Emergência": tabela nova
+        await db.execute(AppDatabaseTables.contatoEmergencia);
+      }
   }
 
   /// Fecha a conexão sem reabrir o banco à toa.
