@@ -1,3 +1,5 @@
+import 'package:app/screens/diario_screen.dart';
+import 'package:app/screens/registro_crise_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/home_screen.dart';
@@ -32,15 +34,15 @@ class TabsScreen extends ConsumerWidget {
     final selectedIndex = ref.watch(tabIndexProvider);
 
     // -Definição da ordem das telas
-    // Índices: 0 = (Remédios), 1 = (Início), 2 = (Configurações)
+    // Índices: 0 = (Diario), 1 = (Início), 2 = (Remedios)
     final List<Widget> screens = const [
-      MedicamentoScreen(), // Índice 0:
+      DiarioScreen(), // Índice 0:
       HomeScreen(), // Índice 1: (Tela inicial)
-      ConfiguracoesScreen(), // Índice 2:
+      MedicamentoScreen(), // Índice 2:
     ];
 
     // -Títulos dinâmicos que acompanham a mudança de abas
-    final List<String> titles = ['Remédios', 'EpiControle', 'Configurações'];
+    final List<String> titles = ['Diário de Crises', 'EpiControle', 'Remédios'];
 
     return Scaffold(
       // AppBar, caso no futuro queira-se uma barra mais personalizavel talvez seja
