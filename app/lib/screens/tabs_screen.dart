@@ -1,10 +1,8 @@
 import 'package:app/screens/diario_screen.dart';
-import 'package:app/screens/registro_crise_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/screens/home_screen.dart';
 import 'package:app/screens/medicamento_screen.dart';
-import 'package:app/screens/configuracoes_screen.dart';
 
 import 'package:app/widgets/custom_bottom_nav_bar.dart';
 import 'package:app/widgets/main_drawer.dart';

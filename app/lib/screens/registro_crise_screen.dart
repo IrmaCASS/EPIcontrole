@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/crise_model.dart';
 import 'package:flutter/services.dart';
+import 'package:app/widgets/activity_selector_card.dart';
+import 'package:app/widgets/multi_select_expandable_card.dart';
+import 'package:app/providers/botao_crise_provider.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE
-// Responsável por renderizar o formulário interativo de registro manual de crises.
 // ============================================================================
-class RegistroCriseScreen extends StatefulWidget {
+class RegistroCriseScreen extends ConsumerStatefulWidget {
   const RegistroCriseScreen({super.key});
 
   static Route route() {
@@ -14,10 +17,10 @@ class RegistroCriseScreen extends StatefulWidget {
   }
 
   @override
-  State<RegistroCriseScreen> createState() => _RegistroCriseScreenState();
+  ConsumerState<RegistroCriseScreen> createState() => _RegistroCriseScreenState();
 }
 
-class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
+class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   // --- Estados do Formulário (Variáveis básicas de tempo e duração) ---
   DateTime _dataSelecionada = DateTime.now();
   TimeOfDay _horaSelecionada = TimeOfDay.now();
@@ -87,6 +90,24 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
   final Color darkText = const Color(0xFF2B1C4C);
   final Color lightBackground = const Color(0xFFF9F7FC);
   final Color baseCardColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Pega o tempo da última crise gravada no state do botão de crise
+    final int duracaoSegundos = ref.read(criseProvider).lastCrisisDuration;
+
+    if (duracaoSegundos > 0) {
+      // Converte os segundos totais em minutos e segundos restantes
+      final int minutos = duracaoSegundos ~/ 60;
+      final int segundos = duracaoSegundos % 60;
+
+      // Preenche automaticamente os controladores de texto
+      _minutosController.text = minutos.toString();
+      _segundosController.text = segundos.toString();
+    }
+  }
 
   // Libera a memória ocupada pelos controladores de texto ao sair da tela
   @override
@@ -192,37 +213,44 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
             _buildInformacoesBasicasCard(), // Sessão de Data, Hora, Duração e Tipo
             const SizedBox(height: 16),
 
-            _buildCardAtividade(), // Sessão "Você estava?" (Dormindo, Acordado, etc)
+            // Sessão "Você estava?" usando o widget
+            ActivitySelectorCard(
+              atividadeSelecionada: _atividadeSelecionada,
+              onSelected: (val) => setState(() => _atividadeSelecionada = val),
+            ),
             const SizedBox(height: 16),
 
-            // Sessões em formato de "Sanfona" (Accordion) com listas de seleção múltipla
-            _buildMenuExpansivel(
+            // Sessões em formato de "Sanfona" com listas de seleção múltipla
+            MultiSelectExpandableCard(
               titulo: 'Aviso da crise',
               icone: Icons.warning_amber_rounded,
               corTema: const Color(0xFF8E62AE),
               itens: avisos,
               selecoes: _avisosSelecionados,
               controllerOutro: _outroAvisoController,
+              onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 16),
 
-            _buildMenuExpansivel(
+            MultiSelectExpandableCard(
               titulo: 'Possíveis gatilhos',
               icone: Icons.error_outline,
               corTema: const Color(0xFFD67733),
               itens: gatilhos,
               selecoes: _gatilhosSelecionados,
               controllerOutro: _outroGatilhoController,
+              onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 16),
 
-            _buildMenuExpansivel(
+            MultiSelectExpandableCard(
               titulo: 'Condição pós-crise',
               icone: Icons.show_chart_rounded,
               corTema: const Color(0xFF3F8241),
               itens: condicoesPosCrise,
               selecoes: _condicoesPosCriseSelecionadas,
               controllerOutro: _outroPosCriseController,
+              onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 32),
 
@@ -244,7 +272,7 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
   }
 
   // ============================================================================
-  // COMPONENTES (WIDGETS) AUXILIARES PARA A UI
+  // COMPONENTES AUXILIARES PARA A UI
   // ============================================================================
 
   // Constrói o cartão branco superior que contém Data, Hora, Duração e Tipo de Crise
@@ -347,7 +375,7 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
             ),
             const SizedBox(height: 16),
 
-            _buildDropdownTipoCrise(), // Chamada para o Dropdown
+            _buildDropdownTipoCrise(),
           ],
         ),
       ),
@@ -369,7 +397,7 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly, // Impede a digitação de letras e sinal de negativo (-)
-              _NumericalRangeFormatter(min: 0, max: maxVal), // Formater customizado para limitar o teto
+              _NumericalRangeFormatter(min: 0, max: maxVal),
             ],
             textAlign: TextAlign.center,
             decoration: InputDecoration(
@@ -475,220 +503,6 @@ class _RegistroCriseScreenState extends State<RegistroCriseScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // Constrói o cartão que pergunta "Você estava?" (Atividade).
-  // Possui 3 botões expansíveis dispostos lado a lado.
-  Widget _buildCardAtividade() {
-    return Material(
-      color: baseCardColor,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Você estava?', style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _buildOpcaoAtividade(
-                    titulo: 'Dormindo',
-                    icone: Icons.bed_outlined,
-                    corAtiva: const Color(0xFF1E67D6), // Azul
-                    fundoInativo: const Color(0xFFF6F2FA),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildOpcaoAtividade(
-                    titulo: 'Acordado',
-                    icone: Icons.show_chart_rounded,
-                    corAtiva: const Color(0xFF3F8241), // Verde
-                    fundoInativo: const Color(0xFFF6F2FA),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildOpcaoAtividade(
-                    titulo: 'Acordando',
-                    icone: Icons.wb_twilight_rounded,
-                    corAtiva: const Color(0xFFD65C00), // Laranja
-                    fundoInativo: const Color(0xFFF6F2FA),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Constrói individualmente as opções do cartão "Você estava?".
-  Widget _buildOpcaoAtividade({
-    required String titulo,
-    required IconData icone,
-    required Color corAtiva,
-    required Color fundoInativo,
-  }) {
-    final bool isSelected = _atividadeSelecionada == titulo;
-
-    return GestureDetector(
-      onTap: () => setState(() => _atividadeSelecionada = titulo),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? corAtiva.withValues(alpha: 0.1) : fundoInativo,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? corAtiva : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isSelected ? corAtiva : const Color(0xFFEAE4F2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icone,
-                color: isSelected ? Colors.white : const Color(0xFF7A609E),
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              titulo,
-              style: TextStyle(
-                color: isSelected ? corAtiva : const Color(0xFF7A609E),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Constrói os Menus Sanfona (Avisos, Gatilhos e Condição pós-crise).
-  // Eles recebem uma lista e gerenciam uma seleção múltipla (Checkboxes circulares).
-  Widget _buildMenuExpansivel({
-    required String titulo,
-    required IconData icone,
-    required Color corTema,
-    required List<String> itens,
-    required Set<String> selecoes,
-    required TextEditingController controllerOutro, // Controlador exclusivo da respectiva seção
-  }) {
-    return Material(
-      color: baseCardColor,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias, // Mantém a animação de clique contida nos limites arredondados
-      child: Theme(
-        // Remove as linhas cinzas nativas que aparecem quando o componente abre
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: corTema.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icone, color: corTema, size: 24),
-          ),
-          title: Text(
-            titulo,
-            style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          iconColor: darkText,
-          collapsedIconColor: darkText.withValues(alpha: 0.5),
-          children: itens.map((item) {
-            final isSelected = selecoes.contains(item);
-            final isOutro = item == 'Outro';
-
-            return Column(
-              children: [
-                // Linha interativa contendo o checkbox customizado circular e o texto
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      if (isSelected) {
-                        selecoes.remove(item);
-                        // Limpa o texto se o usuário desmarcar a opção "Outro"
-                        if (isOutro) controllerOutro.clear();
-                      } else {
-                        selecoes.add(item);
-                      }
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        // Checkbox Circular Animado
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isSelected ? corTema : Colors.transparent,
-                            border: Border.all(
-                              color: isSelected ? corTema : const Color(0xFFD1C8E1),
-                              width: 2,
-                            ),
-                          ),
-                          child: isSelected
-                              ? const Icon(Icons.check, size: 14, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(item, style: TextStyle(color: darkText, fontSize: 15)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Exibe o Campo de Texto extra imediatamente abaixo caso a opção "Outro" esteja marcada
-                if (isOutro && isSelected)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
-                    child: TextField(
-                      controller: controllerOutro,
-                      decoration: InputDecoration(
-                        hintText: 'Descreva aqui...',
-                        hintStyle: TextStyle(color: darkText.withValues(alpha: 0.4), fontSize: 15),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2D9F3), width: 1.5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: corTema, width: 1.5),
-                        ),
-                      ),
-                      style: TextStyle(color: darkText, fontSize: 15),
-                    ),
-                  ),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
     );
   }
 }
