@@ -1,3 +1,4 @@
+import 'package:app/screens/registro_crise_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/widgets/botao_de_crise.dart';
@@ -71,9 +72,7 @@ class HomeScreen extends ConsumerWidget {
                   0xFFF4C033,
                 ).withValues(alpha: 0.3),
                 onTap: () {
-                  Navigator.of(
-                    context,
-                  ).push(MockScreen.route('Registrar Nova Crise'));
+                  Navigator.of(context).push(RegistroCriseScreen.route());
                 },
               ),
             ],

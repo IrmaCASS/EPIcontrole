@@ -53,6 +53,10 @@ class CriseNotifier extends Notifier<CriseState> {
   void _startCrisis() {
     state = state.copyWith(isActive: true, secondsElapsed: 0);
 
+    // TODO: Chamar AlertaService para enviar SMS ou GPS aos contatos
+    // TODO: Chamar AudioService para tocar o alarme sonoro local
+
+    // Inicia o cronômetro
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       state = state.copyWith(secondsElapsed: state.secondsElapsed + 1);
 
@@ -66,6 +70,8 @@ class CriseNotifier extends Notifier<CriseState> {
     _timer?.cancel();
 
     final duracaoFinal = state.secondsElapsed;
+
+    // TODO: Parar a reprodução do AudioService
 
     // Salva a crise no banco (só se durou pelo menos 1 segundo)
     if (duracaoFinal > 0) {
