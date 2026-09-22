@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/screens/mock_screen.dart';
 import 'package:app/screens/diario_screen.dart';
+import 'package:app/screens/registro_crise_screen.dart';
 
 /// Widget separado para o Menu Lateral (Drawer)
 /// Contém as opções das telas principais; todas levam para páginas de mock
@@ -70,7 +71,7 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.app_registration),
             title: const Text('Registrar Nova Crise'),
-            onTap: () => _navigateToMock(context, 'Registrar Nova Crise'),
+            onTap: () => Navigator.of(context).push(RegistroCriseScreen.route()),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
