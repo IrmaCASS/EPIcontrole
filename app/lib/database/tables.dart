@@ -97,4 +97,96 @@ class AppDatabaseTables {
       FOREIGN KEY (id_paciente) REFERENCES paciente (id_paciente) ON DELETE CASCADE
     )
   ''';
+
+  // ---------------------------------------------------------------------
+  // SPRINT — Diário de Crises: catálogos e relações N:N (ativa a partir
+  // da v4). Diferente da coluna atividade_antes_crise (v2): aqui o
+  // Diário vira uma entidade própria, com sintomas/gatilhos catalogados
+  // e reutilizáveis tanto no diário quanto nas crises.
+  // ---------------------------------------------------------------------
+
+  static const String diario = '''
+    CREATE TABLE diario (
+      id_diario INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_paciente INTEGER NOT NULL,
+      data_hora TEXT NOT NULL,
+      anotacoes TEXT,
+      FOREIGN KEY (id_paciente) REFERENCES paciente (id_paciente) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String catalogoSintoma = '''
+    CREATE TABLE catalogo_sintoma (
+      id_sintoma INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL UNIQUE
+    )
+  ''';
+
+  static const String catalogoGatilho = '''
+    CREATE TABLE catalogo_gatilho (
+      id_gatilho INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL UNIQUE
+    )
+  ''';
+
+  /// Catálogo de referência de medicamentos associáveis a uma crise.
+  /// Não confundir com a futura tabela `medicamento` (Sprint 2, ainda
+  /// não criada), que guardará os medicamentos de uso contínuo do
+  /// próprio paciente, com dosagem e frequência.
+  static const String catalogoMedicamento = '''
+    CREATE TABLE catalogo_medicamento (
+      id_catalogo_medicamento INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL UNIQUE
+    )
+  ''';
+
+  static const String diarioSintoma = '''
+    CREATE TABLE diario_sintoma (
+      id_diario INTEGER NOT NULL,
+      id_sintoma INTEGER NOT NULL,
+      PRIMARY KEY (id_diario, id_sintoma),
+      FOREIGN KEY (id_diario) REFERENCES diario (id_diario) ON DELETE CASCADE,
+      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String diarioGatilho = '''
+    CREATE TABLE diario_gatilho (
+      id_diario INTEGER NOT NULL,
+      id_gatilho INTEGER NOT NULL,
+      PRIMARY KEY (id_diario, id_gatilho),
+      FOREIGN KEY (id_diario) REFERENCES diario (id_diario) ON DELETE CASCADE,
+      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String criseSintoma = '''
+    CREATE TABLE crise_sintoma (
+      id_crise INTEGER NOT NULL,
+      id_sintoma INTEGER NOT NULL,
+      PRIMARY KEY (id_crise, id_sintoma),
+      FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
+      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String criseGatilho = '''
+    CREATE TABLE crise_gatilho (
+      id_crise INTEGER NOT NULL,
+      id_gatilho INTEGER NOT NULL,
+      PRIMARY KEY (id_crise, id_gatilho),
+      FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
+      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String criseMedicamento = '''
+    CREATE TABLE crise_medicamento (
+      id_crise INTEGER NOT NULL,
+      id_catalogo_medicamento INTEGER NOT NULL,
+      PRIMARY KEY (id_crise, id_catalogo_medicamento),
+      FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
+      FOREIGN KEY (id_catalogo_medicamento) REFERENCES catalogo_medicamento (id_catalogo_medicamento) ON DELETE CASCADE
+    )
+  ''';
 }
