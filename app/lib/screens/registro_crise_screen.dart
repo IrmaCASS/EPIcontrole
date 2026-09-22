@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:app/widgets/activity_selector_card.dart';
 import 'package:app/widgets/multi_select_expandable_card.dart';
 import 'package:app/providers/botao_crise_provider.dart';
+import 'package:app/providers/registro_crise_provider.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE
@@ -163,11 +164,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       estadoPosIctal: _prepararStringSelecoes(_condicoesPosCriseSelecionadas, _outroPosCriseController),
     );
 
-    // ==========================================================
-    // TODO: INTEGRAÇÃO BACKEND (CriseRepository)
-    // Local onde a chamada ao Provider ou Repositório irá inserir
-    // a `novaCrise` no banco de dados local.
-    // ==========================================================
+    // Persiste a crise no banco de dados local
+    ref.read(criseRepositoryProvider).inserirCrise(novaCrise);
 
     // Exibe um feedback visual de sucesso e retorna para a tela anterior
     ScaffoldMessenger.of(context).showSnackBar(
