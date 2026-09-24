@@ -140,13 +140,16 @@ class AppDatabaseTables {
     )
   ''';
 
+  /// ON DELETE RESTRICT no catálogo: apagar um sintoma que já está em uso
+  /// num diário fica bloqueado (não apaga o histórico em cascata). Decisão
+  /// alinhada com a Irma — ver /areas/epicontrole-projeto.md.
   static const String diarioSintoma = '''
     CREATE TABLE diario_sintoma (
       id_diario INTEGER NOT NULL,
       id_sintoma INTEGER NOT NULL,
       PRIMARY KEY (id_diario, id_sintoma),
       FOREIGN KEY (id_diario) REFERENCES diario (id_diario) ON DELETE CASCADE,
-      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE CASCADE
+      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE RESTRICT
     )
   ''';
 
@@ -156,7 +159,7 @@ class AppDatabaseTables {
       id_gatilho INTEGER NOT NULL,
       PRIMARY KEY (id_diario, id_gatilho),
       FOREIGN KEY (id_diario) REFERENCES diario (id_diario) ON DELETE CASCADE,
-      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE CASCADE
+      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE RESTRICT
     )
   ''';
 
@@ -166,7 +169,7 @@ class AppDatabaseTables {
       id_sintoma INTEGER NOT NULL,
       PRIMARY KEY (id_crise, id_sintoma),
       FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
-      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE CASCADE
+      FOREIGN KEY (id_sintoma) REFERENCES catalogo_sintoma (id_sintoma) ON DELETE RESTRICT
     )
   ''';
 
@@ -176,7 +179,7 @@ class AppDatabaseTables {
       id_gatilho INTEGER NOT NULL,
       PRIMARY KEY (id_crise, id_gatilho),
       FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
-      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE CASCADE
+      FOREIGN KEY (id_gatilho) REFERENCES catalogo_gatilho (id_gatilho) ON DELETE RESTRICT
     )
   ''';
 
@@ -186,7 +189,23 @@ class AppDatabaseTables {
       id_catalogo_medicamento INTEGER NOT NULL,
       PRIMARY KEY (id_crise, id_catalogo_medicamento),
       FOREIGN KEY (id_crise) REFERENCES crise (id_crise) ON DELETE CASCADE,
-      FOREIGN KEY (id_catalogo_medicamento) REFERENCES catalogo_medicamento (id_catalogo_medicamento) ON DELETE CASCADE
+      FOREIGN KEY (id_catalogo_medicamento) REFERENCES catalogo_medicamento (id_catalogo_medicamento) ON DELETE RESTRICT
     )
   ''';
+  // Índices nas FKs das tabelas N:N — sem eles, consultas como "todas as
+  // crises que tiveram o sintoma X" fazem varredura completa da tabela.
+  static const String idxDiarioSintomaSintoma =
+      'CREATE INDEX idx_diario_sintoma_sintoma ON diario_sintoma(id_sintoma)';
+
+  static const String idxDiarioGatilhoGatilho =
+      'CREATE INDEX idx_diario_gatilho_gatilho ON diario_gatilho(id_gatilho)';
+
+  static const String idxCriseSintomaSintoma =
+      'CREATE INDEX idx_crise_sintoma_sintoma ON crise_sintoma(id_sintoma)';
+
+  static const String idxCriseGatilhoGatilho =
+      'CREATE INDEX idx_crise_gatilho_gatilho ON crise_gatilho(id_gatilho)';
+
+  static const String idxCriseMedicamentoCatalogo =
+      'CREATE INDEX idx_crise_medicamento_catalogo ON crise_medicamento(id_catalogo_medicamento)';
 }
