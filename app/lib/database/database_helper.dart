@@ -151,16 +151,19 @@ class DatabaseHelper {
   Future<void> _seedCatalogos(Database db) async {
     final batch = db.batch();
     for (final nome in _seedSintomas) {
-      batch.insert('catalogo_sintoma', {'nome': nome},
-          conflictAlgorithm: ConflictAlgorithm.ignore);
+      batch.insert('catalogo_sintoma', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     for (final nome in _seedGatilhos) {
-      batch.insert('catalogo_gatilho', {'nome': nome},
-          conflictAlgorithm: ConflictAlgorithm.ignore);
+      batch.insert('catalogo_gatilho', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     for (final nome in _seedMedicamentos) {
-      batch.insert('catalogo_medicamento', {'nome': nome},
-          conflictAlgorithm: ConflictAlgorithm.ignore);
+      batch.insert('catalogo_medicamento', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     await batch.commit(noResult: true);
   }
