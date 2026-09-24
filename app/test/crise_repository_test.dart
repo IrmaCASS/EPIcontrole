@@ -10,7 +10,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../lib/database/tables.dart';
 import '../lib/models/crise_model.dart';
