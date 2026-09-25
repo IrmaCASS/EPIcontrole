@@ -189,67 +189,135 @@ void main() {
       await db.close();
     });
 
-    test('inserirDiarioComRelacoes cria diário com sintomas e gatilhos em transação',
-        () async {
-      final idDiario = await repository.inserirDiarioComRelacoes(
-        DiarioModel(
-          idPaciente: 1,
-          dataHora: DateTime.now(),
-          anotacoes: 'Dia difícil',
-        ),
-        idsSintomas: [1],
-        idsGatilhos: [1],
-      );
-
-      final diarios =
-          await db.query('diario', where: 'id_diario = ?', whereArgs: [idDiario]);
-      final relSintomas = await db.query('diario_sintoma',
-          where: 'id_diario = ?', whereArgs: [idDiario]);
-      final relGatilhos = await db.query('diario_gatilho',
-          where: 'id_diario = ?', whereArgs: [idDiario]);
-
-      expect(diarios.length, 1);
-      expect(relSintomas.length, 1);
-      expect(relGatilhos.length, 1);
-    });
-
-    test('inserirDiarioComRelacoes com paciente inexistente não deixa registro órfão',
-        () async {
-      expect(
-        () => repository.inserirDiarioComRelacoes(
-          DiarioModel(idPaciente: 99, dataHora: DateTime.now()),
+    test(
+      'inserirDiarioComRelacoes cria diário com sintomas e gatilhos em transação',
+      () async {
+        final idDiario = await repository.inserirDiarioComRelacoes(
+          DiarioModel(
+            idPaciente: 1,
+            dataHora: DateTime.now(),
+            anotacoes: 'Dia difícil',
+          ),
           idsSintomas: [1],
-        ),
-        throwsA(isA<DatabaseException>()),
-      );
+          idsGatilhos: [1],
+        );
 
-      // A transação deve ter feito rollback: nada foi salvo.
-      final diarios = await db.query('diario');
-      final relSintomas = await db.query('diario_sintoma');
-      expect(diarios, isEmpty);
-      expect(relSintomas, isEmpty);
-    });
+        final diarios = await db.query(
+          'diario',
+          where: 'id_diario = ?',
+          whereArgs: [idDiario],
+        );
+        final relSintomas = await db.query(
+          'diario_sintoma',
+          where: 'id_diario = ?',
+          whereArgs: [idDiario],
+        );
+        final relGatilhos = await db.query(
+          'diario_gatilho',
+          where: 'id_diario = ?',
+          whereArgs: [idDiario],
+        );
+
+        expect(diarios.length, 1);
+        expect(relSintomas.length, 1);
+        expect(relGatilhos.length, 1);
+      },
+    );
 
     test(
-        'buscarCriseCompleta retorna a crise com sintomas, gatilhos e medicamentos vinculados',
-        () async {
-      final idCrise = await db.insert('crise', {
-        'id_paciente': 1,
-        'data_hora_inicio': DateTime.now().toIso8601String(),
-        'duracao_segundos': 45,
-      });
+      'inserirDiarioComRelacoes com paciente inexistente não deixa registro órfão',
+      () async {
+        expect(
+          () => repository.inserirDiarioComRelacoes(
+            DiarioModel(idPaciente: 99, dataHora: DateTime.now()),
+            idsSintomas: [1],
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
 
-      await repository.vincularSintomaACrise(idCrise, 1);
-      await repository.vincularGatilhoACrise(idCrise, 1);
-      await repository.vincularMedicamentoACrise(idCrise, 1);
+        // A transação deve ter feito rollback: nada foi salvo.
+        final diarios = await db.query('diario');
+        final relSintomas = await db.query('diario_sintoma');
+        expect(diarios, isEmpty);
+        expect(relSintomas, isEmpty);
+      },
+    );
 
-      final completa = await repository.buscarCriseCompleta(idCrise);
+    test(
+      'buscarCriseCompleta retorna a crise com sintomas, gatilhos e medicamentos vinculados',
+      () async {
+        final idCrise = await db.insert('crise', {
+          'id_paciente': 1,
+          'data_hora_inicio': DateTime.now().toIso8601String(),
+          'duracao_segundos': 45,
+        });
 
-      expect(completa, isNotNull);
-      expect(completa!.sintomas.length, 1);
-      expect(completa.gatilhos.length, 1);
-      expect(completa.medicamentos.length, 1);
-      expect(completa.sintomas.first.nome, 'Confusão mental');
-    });
+        await repository.vincularSintomaACrise(idCrise, 1);
+        await repository.vincularGatilhoACrise(idCrise, 1);
+        await repository.vincularMedicamentoACrise(idCrise, 1);
+
+        final completa = await repository.buscarCriseCompleta(idCrise);
+
+        expect(completa, isNotNull);
+        expect(completa!.sintomas.length, 1);
+        expect(completa.gatilhos.length, 1);
+        expect(completa.medicamentos.length, 1);
+        expect(completa.sintomas.first.nome, 'Confusão mental');
+      },
+    );
+
+    test(
+      'buscarSintomas/ buscarGatilhos/ buscarMedicamentos listam o catálogo',
+      () async {
+        final sintomas = await repository.buscarSintomas();
+        final gatilhos = await repository.buscarGatilhos();
+        final medicamentos = await repository.buscarMedicamentos();
+
+        expect(sintomas.map((s) => s.nome), ['Confusão mental']);
+        expect(gatilhos.map((g) => g.nome), ['Privação de sono']);
+        expect(medicamentos.map((m) => m.nome), ['Levetiracetam']);
+      },
+    );
+
+    test(
+      'buscarDiariosPorPeriodo retorna só os diários do intervalo',
+      () async {
+        final hoje = DateTime(2026, 9, 24, 10, 0);
+        await repository.inserirDiarioComRelacoes(
+          DiarioModel(idPaciente: 1, dataHora: hoje),
+        );
+        await repository.inserirDiarioComRelacoes(
+          DiarioModel(
+            idPaciente: 1,
+            dataHora: hoje.add(const Duration(days: 5)),
+          ),
+        );
+
+        final diarios = await repository.buscarDiariosPorPeriodo(
+          inicio: DateTime(2026, 9, 1),
+          fim: DateTime(2026, 10, 1),
+        );
+
+        expect(diarios.length, 2);
+      },
+    );
+
+    test(
+      'buscarDiarioComRelacoes retorna diário com sintomas e gatilhos',
+      () async {
+        final idDiario = await repository.inserirDiarioComRelacoes(
+          DiarioModel(idPaciente: 1, dataHora: DateTime(2026, 9, 24)),
+          idsSintomas: [1],
+          idsGatilhos: [1],
+        );
+
+        final completo = await repository.buscarDiarioComRelacoes(idDiario);
+
+        expect(completo, isNotNull);
+        expect(completo!.sintomas.length, 1);
+        expect(completo.gatilhos.length, 1);
+        expect(completo.sintomas.first.nome, 'Confusão mental');
+      },
+    );
   });
 }
