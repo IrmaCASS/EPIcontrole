@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/screens/mock_screen.dart';
 import 'package:app/screens/diario_screen.dart';
+import 'package:app/screens/registro_crise_screen.dart';
 
 /// Widget separado para o Menu Lateral (Drawer)
 /// Contém as opções das telas principais; todas levam para páginas de mock
@@ -49,19 +50,6 @@ class MainDrawer extends StatelessWidget {
               onSelectInicio?.call(); // Vai para a aba do Botão de Crise
             },
           ),
-                 ListTile(
-            leading: const Icon(Icons.book_outlined),
-            title: const Text('Diário de Crises'),
-            onTap: () {
-              Navigator.pop(context); // Fecha o drawer
-              Navigator.of(context).push(DiarioScreen.route());
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.medical_services_outlined),
-            title: const Text('Medicamentos'),
-            onTap: () => _navigateToMock(context, 'Medicamentos'),
-          ),
           ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Relatórios'),
@@ -70,7 +58,7 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.app_registration),
             title: const Text('Registrar Nova Crise'),
-            onTap: () => _navigateToMock(context, 'Registrar Nova Crise'),
+            onTap: () => Navigator.of(context).push(RegistroCriseScreen.route()),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
