@@ -1,13 +1,11 @@
 // Testes da expansão do Diário de Crises (catálogos + relações N:N):
 // migração de schema, transação atômica e consulta com join.
 //
-// Nota sobre o teste de migração: a lógica real de upgrade fica em
-// DatabaseHelper._onUpgrade, que é privado (não acessível fora do
-// arquivo). Por isso, este teste replica a mesma sequência de DDL
-// (usando as mesmas constantes de AppDatabaseTables) para validar que,
-// partindo de um banco "antigo" v1, o upgrade preserva dados e cria as
-// tabelas certas. Se a orquestração real do _onUpgrade mudar, atualize
-// a função _applyMigracaoParaV4 abaixo junto.
+// O teste de migração chama Migrations.apply() diretamente — o mesmo
+// código usado em produção pelo DatabaseHelper._onUpgrade. Isso garante
+// que, se alguém mudar a migração real e esquecer de atualizar o teste,
+// o teste quebra (em vez de continuar passando silenciosamente com uma
+// cópia desatualizada da lógica).
 
 import 'dart:io';
 
@@ -16,6 +14,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../lib/database/migrations.dart';
 import '../lib/database/tables.dart';
 import '../lib/models/diario_model.dart';
 import '../lib/repositories/diario_repository.dart';
@@ -38,26 +37,6 @@ const _criseV1 = '''
     FOREIGN KEY (id_paciente) REFERENCES paciente (id_paciente) ON DELETE CASCADE
   )
 ''';
-
-Future<void> _applyMigracaoParaV4(Database db, int oldVersion) async {
-  if (oldVersion < 2) {
-    await db.execute(AppDatabaseTables.addColunaAtividadeAntesCrise);
-  }
-  if (oldVersion < 3) {
-    await db.execute(AppDatabaseTables.contatoEmergencia);
-  }
-  if (oldVersion < 4) {
-    await db.execute(AppDatabaseTables.diario);
-    await db.execute(AppDatabaseTables.catalogoSintoma);
-    await db.execute(AppDatabaseTables.catalogoGatilho);
-    await db.execute(AppDatabaseTables.catalogoMedicamento);
-    await db.execute(AppDatabaseTables.diarioSintoma);
-    await db.execute(AppDatabaseTables.diarioGatilho);
-    await db.execute(AppDatabaseTables.criseSintoma);
-    await db.execute(AppDatabaseTables.criseGatilho);
-    await db.execute(AppDatabaseTables.criseMedicamento);
-  }
-}
 
 void main() {
   setUpAll(() {
@@ -105,13 +84,14 @@ void main() {
       await dbV1.close();
 
       // 2) Reabre o MESMO arquivo pedindo a versão atual (4) — dispara
-      // o onUpgrade, igual ao que acontece de verdade no app.
+      // o onUpgrade, igual ao que acontece de verdade no app. Aqui já
+      // chamamos Migrations.apply() diretamente, o código real.
       final dbV4 = await databaseFactory.openDatabase(
         path,
         options: OpenDatabaseOptions(
           version: 4,
           onUpgrade: (db, oldVersion, newVersion) async {
-            await _applyMigracaoParaV4(db, oldVersion);
+            await Migrations.apply(db, oldVersion, newVersion);
           },
         ),
       );
