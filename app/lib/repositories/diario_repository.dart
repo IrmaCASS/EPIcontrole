@@ -73,28 +73,84 @@ class DiarioRepository {
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
+  /// Converte uma CriseModel em DiarioModel para exibição unificada
+  /// na tela do Diário de Crises.
+  DiarioModel _criseParaDiario(CriseModel crise) {
+    final partes = <String>[];
+    if (crise.tipoCrise != null && crise.tipoCrise!.isNotEmpty) {
+      partes.add('Tipo: ${crise.tipoCrise}');
+    }
+    if (crise.duracao != null && crise.duracao!.inSeconds > 0) {
+      partes.add('Duração: ${crise.duracao!.inSeconds}s');
+    }
+    if (crise.atividadeAntesCrise != null &&
+        crise.atividadeAntesCrise!.isNotEmpty) {
+      partes.add('Você estava: ${crise.atividadeAntesCrise}');
+    }
+    if (crise.anotacoes != null && crise.anotacoes!.isNotEmpty) {
+      partes.add(crise.anotacoes!);
+    }
+
+    return DiarioModel(
+      idDiario: null,
+      idPaciente: crise.idPaciente,
+      dataHora: crise.dataHoraInicio,
+      anotacoes: partes.isEmpty ? 'Crise registrada' : partes.join(' • '),
+    );
+  }
+
+  /// Busca diários E crises recentes (unificados para a tela do Diário).
   Future<List<DiarioModel>> buscarDiariosRecentes({int limite = 10}) async {
     final db = await _databaseProvider();
-    final result = await db.query(
+
+    final diariosResult = await db.query(
       'diario',
       orderBy: 'data_hora DESC',
       limit: limite,
     );
-    return result.map((map) => DiarioModel.fromMap(map)).toList();
+    final diarios = diariosResult.map((m) => DiarioModel.fromMap(m)).toList();
+
+    final crisesResult = await db.query(
+      'crise',
+      orderBy: 'data_hora_inicio DESC',
+      limit: limite,
+    );
+    final crises = crisesResult
+        .map((m) => _criseParaDiario(CriseModel.fromMap(m)))
+        .toList();
+
+    final todos = [...diarios, ...crises];
+    todos.sort((a, b) => b.dataHora.compareTo(a.dataHora));
+    return todos.take(limite).toList();
   }
 
-  /// Busca diários de um dia específico (ignora a hora).
+  /// Busca diários E crises de um dia específico (ignora a hora).
   Future<List<DiarioModel>> buscarDiarioPorData(DateTime data) async {
     final db = await _databaseProvider();
     final inicioDoDia = DateTime(data.year, data.month, data.day);
     final fimDoDia = inicioDoDia.add(const Duration(days: 1));
-    final result = await db.query(
+    final inicioStr = inicioDoDia.toIso8601String();
+    final fimStr = fimDoDia.toIso8601String();
+
+    final diariosResult = await db.query(
       'diario',
       where: 'data_hora >= ? AND data_hora < ?',
-      whereArgs: [inicioDoDia.toIso8601String(), fimDoDia.toIso8601String()],
-      orderBy: 'data_hora ASC',
+      whereArgs: [inicioStr, fimStr],
     );
-    return result.map((map) => DiarioModel.fromMap(map)).toList();
+    final diarios = diariosResult.map((m) => DiarioModel.fromMap(m)).toList();
+
+    final crisesResult = await db.query(
+      'crise',
+      where: 'data_hora_inicio >= ? AND data_hora_inicio < ?',
+      whereArgs: [inicioStr, fimStr],
+    );
+    final crises = crisesResult
+        .map((m) => _criseParaDiario(CriseModel.fromMap(m)))
+        .toList();
+
+    final todos = [...diarios, ...crises];
+    todos.sort((a, b) => a.dataHora.compareTo(b.dataHora));
+    return todos;
   }
 
   /// Retorna a crise com as listas de sintomas, gatilhos e medicamentos
@@ -172,19 +228,34 @@ class DiarioRepository {
     return result.map((map) => CatalogoMedicamentoModel.fromMap(map)).toList();
   }
 
-  /// Busca diários de um período (usado no calendário, por mês).
+  /// Busca diários E crises de um período (usado no calendário, por mês).
   Future<List<DiarioModel>> buscarDiariosPorPeriodo({
     required DateTime inicio,
     required DateTime fim,
   }) async {
     final db = await _databaseProvider();
-    final result = await db.query(
+    final inicioStr = inicio.toIso8601String();
+    final fimStr = fim.toIso8601String();
+
+    final diariosResult = await db.query(
       'diario',
       where: 'data_hora >= ? AND data_hora < ?',
-      whereArgs: [inicio.toIso8601String(), fim.toIso8601String()],
-      orderBy: 'data_hora ASC',
+      whereArgs: [inicioStr, fimStr],
     );
-    return result.map((map) => DiarioModel.fromMap(map)).toList();
+    final diarios = diariosResult.map((m) => DiarioModel.fromMap(m)).toList();
+
+    final crisesResult = await db.query(
+      'crise',
+      where: 'data_hora_inicio >= ? AND data_hora_inicio < ?',
+      whereArgs: [inicioStr, fimStr],
+    );
+    final crises = crisesResult
+        .map((m) => _criseParaDiario(CriseModel.fromMap(m)))
+        .toList();
+
+    final todos = [...diarios, ...crises];
+    todos.sort((a, b) => a.dataHora.compareTo(b.dataHora));
+    return todos;
   }
 
   /// Retorna o diário com os sintomas e gatilhos vinculados
