@@ -267,6 +267,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       );
 
       if (!mounted) return;
+      // Avisa a tela de Diário que um novo registro foi salvo
+      ref.read(refreshDiarioProvider.notifier).state++;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Crise registrada e vinculada ao diário')),
       );

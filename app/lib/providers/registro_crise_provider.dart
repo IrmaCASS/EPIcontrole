@@ -11,3 +11,7 @@ final criseRepositoryProvider = Provider<CriseRepository>((ref) {
 final diarioRepositoryProvider = Provider<DiarioRepository>((ref) {
   return DiarioRepository();
 });
+
+/// Provider que sinaliza quando um novo registro foi salvo.
+/// A tela de Diário escuta isso para recarregar a lista automaticamente.
+final refreshDiarioProvider = StateProvider<int>((ref) => 0);

@@ -81,6 +81,11 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Escuta o sinal de "novo registro salvo" e recarrega a lista
+    ref.listen<int>(refreshDiarioProvider, (previous, next) {
+      _carregarCrisesDoMes(_focusedDay);
+    });
+
     final crisesDoDia = _selectedDay != null
         ? _getCrisesParaDia(_selectedDay!)
         : <CriseModel>[];
