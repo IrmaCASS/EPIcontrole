@@ -3,12 +3,14 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:app/models/crise_model.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/widgets/empty_state_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/providers/registro_crise_provider.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE DIÁRIO DE CRISES
 // Responsável por exibir o calendário interativo e a lista de registros diários.
 // ============================================================================
-class DiarioScreen extends StatefulWidget {
+class DiarioScreen extends ConsumerStatefulWidget {
   const DiarioScreen({super.key});
 
   static Route route() {
@@ -16,13 +18,15 @@ class DiarioScreen extends StatefulWidget {
   }
 
   @override
-  State<DiarioScreen> createState() => _DiarioScreenState();
+  ConsumerState<DiarioScreen> createState() => _DiarioScreenState();
 }
 
-class _DiarioScreenState extends State<DiarioScreen> {
+class _DiarioScreenState extends ConsumerState<DiarioScreen> {
   // --- Estados do Calendário ---
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  // Crises reais carregadas do banco para o mês focado
+  List<CriseModel> _crisesDoMes = [];
 
   // --- Cores da Paleta ---
   final Color darkText = AppTheme.primaryPurple;
@@ -39,37 +43,36 @@ class _DiarioScreenState extends State<DiarioScreen> {
   }
 
   void _carregarEventosDoMes(DateTime mes) {
-    // ==========================================================
-    // TODO: INTEGRAÇÃO BACKEND (CriseRepository & MedicamentoRepository)
-    // ==========================================================
+    _carregarCrisesDoMes(mes);
   }
 
-  // ==========================================================
-  // --- MOCK DE DADOS PARA A INTERFACE ---
-  List<CriseModel> _getCrisesParaDia(DateTime dia) {
-    final hoje = DateTime.now();
-    if (isSameDay(dia, hoje)) {
-      return [
-        CriseModel(
-          dataHoraInicio: hoje,
-          tipoCrise: 'Tônico-clônica generalizada',
-          duracao: const Duration(minutes: 2, seconds: 30),
-        )
-      ];
-    } else if (isSameDay(dia, hoje.subtract(const Duration(days: 1)))) {
-      return [
-        CriseModel(
-          dataHoraInicio: hoje.subtract(const Duration(days: 1)),
-          tipoCrise: 'Ausência',
-        )
-      ];
+  Future<void> _carregarCrisesDoMes(DateTime mes) async {
+    try {
+      final inicio = DateTime(mes.year, mes.month, 1);
+      final fim = DateTime(
+        mes.year,
+        mes.month + 1,
+        0,
+      ).add(const Duration(days: 1));
+      final crises = await ref
+          .read(criseRepositoryProvider)
+          .buscarCrisesPorPeriodo(inicio: inicio, fim: fim);
+      if (mounted) setState(() => _crisesDoMes = crises);
+    } catch (e) {
+      // Se der erro no banco, não deixa o app travar
     }
-    return [];
+  }
+
+  List<CriseModel> _getCrisesParaDia(DateTime dia) {
+    return _crisesDoMes
+        .where((crise) => isSameDay(crise.dataHoraInicio, dia))
+        .toList();
   }
 
   List<String> _getMedicamentosParaDia(DateTime dia) {
     final hoje = DateTime.now();
-    if (isSameDay(dia, hoje) || isSameDay(dia, hoje.add(const Duration(days: 1)))) {
+    if (isSameDay(dia, hoje) ||
+        isSameDay(dia, hoje.add(const Duration(days: 1)))) {
       return ['Carbamazepina 200mg - 08:00', 'Ácido Valproico 500mg - 20:00'];
     }
     return [];
@@ -78,8 +81,12 @@ class _DiarioScreenState extends State<DiarioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final crisesDoDia = _selectedDay != null ? _getCrisesParaDia(_selectedDay!) : <CriseModel>[];
-    final medicamentosDoDia = _selectedDay != null ? _getMedicamentosParaDia(_selectedDay!) : <String>[];
+    final crisesDoDia = _selectedDay != null
+        ? _getCrisesParaDia(_selectedDay!)
+        : <CriseModel>[];
+    final medicamentosDoDia = _selectedDay != null
+        ? _getMedicamentosParaDia(_selectedDay!)
+        : <String>[];
     final temEventos = crisesDoDia.isNotEmpty || medicamentosDoDia.isNotEmpty;
 
     return Scaffold(
@@ -97,15 +104,15 @@ class _DiarioScreenState extends State<DiarioScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent, // Topo transparente (sob o calendário)
-                    Colors.black,       // Conteúdo visível
-                    Colors.black,       // Conteúdo visível
+                    Colors.black, // Conteúdo visível
+                    Colors.black, // Conteúdo visível
                     Colors.transparent, // Fundo transparente (sob a nav bar)
                   ],
                   stops: [
                     0.0,
                     0.015, // 0.5% de esfumaçado no topo
-                    0.92,  // Começa a esfumaçar nos últimos 8%
-                    1.0,  // Termina totalmente transparente
+                    0.92, // Começa a esfumaçar nos últimos 8%
+                    1.0, // Termina totalmente transparente
                   ],
                 ).createShader(rect);
               },
@@ -128,19 +135,19 @@ class _DiarioScreenState extends State<DiarioScreen> {
     return Container(
       padding: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              offset: const Offset(0, 4),
-              blurRadius: 8,
-            ),
-          ],
-          // Arredondamento no final do calendário
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          )
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            offset: const Offset(0, 4),
+            blurRadius: 8,
+          ),
+        ],
+        // Arredondamento no final do calendário
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
       child: TableCalendar(
         locale: 'pt_BR',
@@ -156,7 +163,11 @@ class _DiarioScreenState extends State<DiarioScreen> {
           formatButtonVisible: false,
           titleCentered: true,
           headerPadding: const EdgeInsets.symmetric(vertical: 4),
-          titleTextStyle: TextStyle(color: darkText, fontSize: 18, fontWeight: FontWeight.w900),
+          titleTextStyle: TextStyle(
+            color: darkText,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
           leftChevronIcon: Icon(Icons.chevron_left, color: darkText),
           rightChevronIcon: Icon(Icons.chevron_right, color: darkText),
         ),
@@ -166,12 +177,18 @@ class _DiarioScreenState extends State<DiarioScreen> {
             color: corFocusedDaySelected.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
-          todayTextStyle: TextStyle(color: corCrise, fontWeight: FontWeight.bold),
+          todayTextStyle: TextStyle(
+            color: corCrise,
+            fontWeight: FontWeight.bold,
+          ),
           selectedDecoration: BoxDecoration(
             color: corFocusedDaySelected,
             shape: BoxShape.circle,
           ),
-          selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          selectedTextStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
@@ -224,13 +241,19 @@ class _DiarioScreenState extends State<DiarioScreen> {
     );
   }
 
-  Widget _buildListaEventos(List<CriseModel> crises, List<String> medicamentos) {
+  Widget _buildListaEventos(
+    List<CriseModel> crises,
+    List<String> medicamentos,
+  ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       children: [
         Text(
           'Registros do dia ${_selectedDay!.day}/${_selectedDay!.month}',
-          style: TextStyle(color: darkText.withValues(alpha: 0.6), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: darkText.withValues(alpha: 0.6),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -252,7 +275,9 @@ class _DiarioScreenState extends State<DiarioScreen> {
             icone: Icons.medical_services_outlined,
             corTema: corMedicamento,
             quantidade: medicamentos.length,
-            filhos: medicamentos.map((med) => _buildCardMedicamento(med)).toList(),
+            filhos: medicamentos
+                .map((med) => _buildCardMedicamento(med))
+                .toList(),
           ),
       ],
     );
@@ -284,7 +309,11 @@ class _DiarioScreenState extends State<DiarioScreen> {
           ),
           title: Text(
             titulo,
-            style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              color: darkText,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -294,7 +323,10 @@ class _DiarioScreenState extends State<DiarioScreen> {
             ),
             child: Text(
               quantidade.toString(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           children: filhos,
@@ -313,7 +345,10 @@ class _DiarioScreenState extends State<DiarioScreen> {
       subtitle: Text(
         '${crise.dataHoraInicio.hour.toString().padLeft(2, '0')}:${crise.dataHoraInicio.minute.toString().padLeft(2, '0')} • Duração: ${crise.duracao != null && crise.duracao!.inSeconds > 0 ? '${crise.duracao!.inMinutes}m ${crise.duracao!.inSeconds % 60}s' : 'Não informada'}',
       ),
-      trailing: Icon(Icons.chevron_right, color: darkText.withValues(alpha: 0.4)),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: darkText.withValues(alpha: 0.4),
+      ),
       onTap: () {},
     );
   }
