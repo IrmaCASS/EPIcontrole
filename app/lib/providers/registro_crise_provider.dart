@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/crise_repository.dart';
 import '../repositories/diario_repository.dart';
@@ -12,6 +13,6 @@ final diarioRepositoryProvider = Provider<DiarioRepository>((ref) {
   return DiarioRepository();
 });
 
-/// Provider que sinaliza quando um novo registro foi salvo.
+/// Notifier global que sinaliza quando um novo registro foi salvo.
 /// A tela de Diário escuta isso para recarregar a lista automaticamente.
-final refreshDiarioProvider = StateProvider<int>((ref) => 0);
+final refreshDiarioNotifier = ValueNotifier<int>(0);

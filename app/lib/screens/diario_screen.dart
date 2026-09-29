@@ -40,6 +40,18 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
     super.initState();
     _selectedDay = _focusedDay;
     _carregarEventosDoMes(_focusedDay);
+    // Escuta o sinal de "novo registro salvo" e recarrega a lista
+    refreshDiarioNotifier.addListener(_onRefresh);
+  }
+
+  void _onRefresh() {
+    _carregarCrisesDoMes(_focusedDay);
+  }
+
+  @override
+  void dispose() {
+    refreshDiarioNotifier.removeListener(_onRefresh);
+    super.dispose();
   }
 
   void _carregarEventosDoMes(DateTime mes) {
@@ -81,11 +93,6 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuta o sinal de "novo registro salvo" e recarrega a lista
-    ref.listen<int>(refreshDiarioProvider, (previous, next) {
-      _carregarCrisesDoMes(_focusedDay);
-    });
-
     final crisesDoDia = _selectedDay != null
         ? _getCrisesParaDia(_selectedDay!)
         : <CriseModel>[];
