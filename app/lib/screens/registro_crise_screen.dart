@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:app/widgets/activity_selector_card.dart';
 import 'package:app/widgets/multi_select_expandable_card.dart';
 import 'package:app/providers/botao_crise_provider.dart';
+import 'package:app/providers/registro_crise_provider.dart';
+import 'package:app/models/diario_model.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE
@@ -17,7 +19,8 @@ class RegistroCriseScreen extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<RegistroCriseScreen> createState() => _RegistroCriseScreenState();
+  ConsumerState<RegistroCriseScreen> createState() =>
+      _RegistroCriseScreenState();
 }
 
 class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
@@ -32,7 +35,12 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   // --- Controladores para capturar o texto dos campos "Outro" ---
   final TextEditingController _outroAvisoController = TextEditingController();
   final TextEditingController _outroGatilhoController = TextEditingController();
-  final TextEditingController _outroPosCriseController = TextEditingController();
+  final TextEditingController _outroPosCriseController =
+      TextEditingController();
+
+  final TextEditingController _outroSintomaController = TextEditingController();
+  final TextEditingController _outroMedicamentoController =
+      TextEditingController();
 
   // --- Variáveis que guardam a seleção  (Radio/Dropdown) ---
   String? _atividadeSelecionada;
@@ -42,6 +50,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   final Set<String> _gatilhosSelecionados = {};
   final Set<String> _condicoesPosCriseSelecionadas = {};
   final Set<String> _avisosSelecionados = {};
+  final Set<String> _sintomasSelecionados = {};
+  final Set<String> _medicamentosSelecionados = {};
 
   // --- Listas de opções fixas que populam a interface gráfica ---
   final List<String> tiposDeCrise = [
@@ -51,7 +61,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Ausência',
     'Mioclônica',
     'Atônica',
-    'Outro'
+    'Outro',
   ];
 
   final List<String> avisos = [
@@ -60,7 +70,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Alteração da visão',
     'Desconforto no estômago',
     'Medo',
-    'Outro'
+    'Outro',
   ];
 
   final List<String> gatilhos = [
@@ -72,7 +82,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Febre',
     'Consumo de álcool',
     'Exercício intenso',
-    'Outro'
+    'Outro',
   ];
 
   final List<String> condicoesPosCrise = [
@@ -83,8 +93,18 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Mordedura de língua',
     'Urinou/evacuou',
     'Recobrou a consciência imediatamente',
-    'Outro'
+    'Outro',
   ];
+
+  // Opções carregadas do catálogo v4 (populadas no initState).
+  List<String> _sintomasCatalogo = [];
+  List<String> _gatilhosCatalogo = [];
+  List<String> _medicamentosCatalogo = [];
+
+  // Guarda os ids do catálogo para vincular nas relações N:N no save.
+  Map<String, int> _sintomasIds = {};
+  Map<String, int> _gatilhosIds = {};
+  Map<String, int> _medicamentosIds = {};
 
   // --- Paleta de cores base para esta tela ---
   final Color darkText = const Color(0xFF2B1C4C);
@@ -107,6 +127,30 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       _minutosController.text = minutos.toString();
       _segundosController.text = segundos.toString();
     }
+    // Carrega os catálogos de sintomas, gatilhos e medicamentos do banco v4.
+    _carregarCatalogos();
+  }
+
+  Future<void> _carregarCatalogos() async {
+    try {
+      final diarioRepository = ref.read(diarioRepositoryProvider);
+      final sintomas = await diarioRepository.buscarSintomas();
+      final gatilhos = await diarioRepository.buscarGatilhos();
+      final medicamentos = await diarioRepository.buscarMedicamentos();
+      if (!mounted) return;
+      setState(() {
+        _sintomasCatalogo = [for (final s in sintomas) s.nome];
+        _gatilhosCatalogo = [for (final g in gatilhos) g.nome];
+        _medicamentosCatalogo = [for (final m in medicamentos) m.nome];
+        _sintomasIds = {for (final s in sintomas) s.nome: s.idSintoma!};
+        _gatilhosIds = {for (final g in gatilhos) g.nome: g.idGatilho!};
+        _medicamentosIds = {
+          for (final m in medicamentos) m.nome: m.idCatalogoMedicamento!,
+        };
+      });
+    } catch (_) {
+      // Sem catálogo disponível, a tela segue com as listas vazias.
+    }
   }
 
   // Libera a memória ocupada pelos controladores de texto ao sair da tela
@@ -117,13 +161,18 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     _outroAvisoController.dispose();
     _outroGatilhoController.dispose();
     _outroPosCriseController.dispose();
+    _outroSintomaController.dispose();
+    _outroMedicamentoController.dispose();
     super.dispose();
   }
 
   // --- FUNÇÃO AUXILIAR: Formata a saída dos itens selecionados ---
   // Se a pessoa marcou várias coisas e a opção "Outro" também, ele anexa o que
   // foi digitado no TextField (Ex: "Aura, Medo, Outro (Cheiro forte)").
-  String _prepararStringSelecoes(Set<String> selecoes, TextEditingController controller) {
+  String _prepararStringSelecoes(
+    Set<String> selecoes,
+    TextEditingController controller,
+  ) {
     List<String> finalSelecoes = selecoes.where((e) => e != 'Outro').toList();
     if (selecoes.contains('Outro')) {
       if (controller.text.trim().isNotEmpty) {
@@ -136,9 +185,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   }
 
   // --- FUNÇÃO PRINCIPAL: Salvar o Registro ---
-  // Monta o objeto DTO (CriseModel) usando os estados atuais da interface.
-  void _salvarRegistro() {
-    // Unifica a data e hora escolhidas em um único objeto DateTime
+  Future<void> _salvarRegistro() async {
     final dataInicio = DateTime(
       _dataSelecionada.year,
       _dataSelecionada.month,
@@ -147,31 +194,81 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       _horaSelecionada.minute,
     );
 
-    // Converte os textos em números, soma e formata em segundos pro DB
     final int minutos = int.tryParse(_minutosController.text) ?? 0;
     final int segundos = int.tryParse(_segundosController.text) ?? 0;
     final int totalSegundos = (minutos * 60) + segundos;
 
-    // Instancia o modelo empacotando os dados
     final novaCrise = CriseModel(
       dataHoraInicio: dataInicio,
-      duracao: Duration(seconds: totalSegundos), // Enviado pro DB em segundos precisos
+      duracao: Duration(seconds: totalSegundos),
       tipoCrise: _tipoCriseSelecionado,
       atividadeAntesCrise: _atividadeSelecionada,
-      prodromosAuras: _prepararStringSelecoes(_avisosSelecionados, _outroAvisoController),
-      desencadeantes: _prepararStringSelecoes(_gatilhosSelecionados, _outroGatilhoController),
-      estadoPosIctal: _prepararStringSelecoes(_condicoesPosCriseSelecionadas, _outroPosCriseController),
+      prodromosAuras: _prepararStringSelecoes(
+        _avisosSelecionados,
+        _outroAvisoController,
+      ),
+      desencadeantes: _prepararStringSelecoes(
+        _gatilhosSelecionados,
+        _outroGatilhoController,
+      ),
+      estadoPosIctal: _prepararStringSelecoes(
+        _condicoesPosCriseSelecionadas,
+        _outroPosCriseController,
+      ),
     );
 
-    // ==========================================================
-    // TODO: INTEGRAÇÃO BACKEND (CriseRepository)
-    // Local onde a chamada ao Provider ou Repositório irá inserir
-    // a `novaCrise` no banco de dados local.
-    // ==========================================================
+    final criseRepository = ref.read(criseRepositoryProvider);
+    final diarioRepository = ref.read(diarioRepositoryProvider);
 
-    // Exibe um feedback visual de sucesso e retorna para a tela anterior
+    // 1) Insere a crise e pega o id gerado
+    final idCrise = await criseRepository.inserirCrise(novaCrise);
+
+    // 2) Vincula o catálogo N:N na crise (Sintomas / Gatilhos / Medicamentos)
+    for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
+      final id = _sintomasIds[nome];
+      if (id != null) {
+        await diarioRepository.vincularSintomaACrise(idCrise, id);
+      }
+    }
+    for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
+      final id = _gatilhosIds[nome];
+      if (id != null) {
+        await diarioRepository.vincularGatilhoACrise(idCrise, id);
+      }
+    }
+    for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
+      final id = _medicamentosIds[nome];
+      if (id != null) {
+        await diarioRepository.vincularMedicamentoACrise(idCrise, id);
+      }
+    }
+
+    // 3) Cria a entrada do diário com os MESMOS sintomas e gatilhos (N:N)
+    final idsSintomas = _sintomasSelecionados
+        .where((e) => e != 'Outro')
+        .map((e) => _sintomasIds[e])
+        .whereType<int>()
+        .toList();
+    final idsGatilhos = _gatilhosSelecionados
+        .where((e) => e != 'Outro')
+        .map((e) => _gatilhosIds[e])
+        .whereType<int>()
+        .toList();
+
+    final novoDiario = DiarioModel(
+      idPaciente: novaCrise.idPaciente,
+      dataHora: dataInicio,
+      anotacoes: _condicoesPosCriseSelecionadas.join(', '),
+    );
+    await diarioRepository.inserirDiarioComRelacoes(
+      novoDiario,
+      idsSintomas: idsSintomas,
+      idsGatilhos: idsGatilhos,
+    );
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Crise registrada (Simulação Frontend)')),
+      const SnackBar(content: Text('Crise registrada e vinculada ao diário')),
     );
     Navigator.pop(context);
   }
@@ -194,12 +291,20 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
           children: [
             Text(
               'Registro de Crise',
-              style: TextStyle(color: darkText, fontWeight: FontWeight.w900, fontSize: 22),
+              style: TextStyle(
+                color: darkText,
+                fontWeight: FontWeight.w900,
+                fontSize: 22,
+              ),
             ),
             const SizedBox(height: 4),
             const Text(
               'Selecione as informações da sua crise',
-              style: TextStyle(color: Color(0xFF5B3089), fontSize: 14, fontWeight: FontWeight.normal),
+              style: TextStyle(
+                color: Color(0xFF5B3089),
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -236,9 +341,20 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
               titulo: 'Possíveis gatilhos',
               icone: Icons.error_outline,
               corTema: const Color(0xFFD67733),
-              itens: gatilhos,
+              itens: _gatilhosCatalogo,
               selecoes: _gatilhosSelecionados,
               controllerOutro: _outroGatilhoController,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+
+            MultiSelectExpandableCard(
+              titulo: 'Sintomas da crise',
+              icone: Icons.healing_outlined,
+              corTema: const Color(0xFF8E62AE),
+              itens: _sintomasCatalogo,
+              selecoes: _sintomasSelecionados,
+              controllerOutro: _outroSintomaController,
               onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 16),
@@ -254,15 +370,34 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
             ),
             const SizedBox(height: 32),
 
+            MultiSelectExpandableCard(
+              titulo: 'Medicamentos usados',
+              icone: Icons.medication_outlined,
+              corTema: const Color(0xFF27AE60),
+              itens: _medicamentosCatalogo,
+              selecoes: _medicamentosSelecionados,
+              controllerOutro: _outroMedicamentoController,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+
             // --- BOTÃO DE SALVAR ---
             ElevatedButton(
               onPressed: _salvarRegistro,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF5B3089),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('SALVAR REGISTRO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'SALVAR REGISTRO',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
           ],
@@ -293,14 +428,25 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF9F7FC),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2D9F3), width: 1.2),
+                    border: Border.all(
+                      color: const Color(0xFFE2D9F3),
+                      width: 1.2,
+                    ),
                   ),
-                  child: const Icon(Icons.calendar_today_outlined, color: Color(0xFF5B3089), size: 20),
+                  child: const Icon(
+                    Icons.calendar_today_outlined,
+                    color: Color(0xFF5B3089),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Informações Básicas',
-                  style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(
+                    color: darkText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
               ],
             ),
@@ -312,7 +458,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                 Expanded(
                   child: _buildSeletorFalso(
                     label: 'Data',
-                    valor: '${_dataSelecionada.day.toString().padLeft(2, '0')}/${_dataSelecionada.month.toString().padLeft(2, '0')}/${_dataSelecionada.year}',
+                    valor:
+                        '${_dataSelecionada.day.toString().padLeft(2, '0')}/${_dataSelecionada.month.toString().padLeft(2, '0')}/${_dataSelecionada.year}',
                     icone: Icons.calendar_month,
                     onTap: () async {
                       // Abre o calendário nativo do sistema
@@ -330,7 +477,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                 Expanded(
                   child: _buildSeletorFalso(
                     label: 'Horário',
-                    valor: '${_horaSelecionada.hour.toString().padLeft(2, '0')}:${_horaSelecionada.minute.toString().padLeft(2, '0')}',
+                    valor:
+                        '${_horaSelecionada.hour.toString().padLeft(2, '0')}:${_horaSelecionada.minute.toString().padLeft(2, '0')}',
                     icone: Icons.access_time,
                     onTap: () async {
                       // Abre o relógio nativo do sistema
@@ -349,7 +497,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
             // Campos para inserção de Duração em Minutos e Segundos
             Text(
               'Duração',
-              style: TextStyle(color: darkText.withValues(alpha: 0.7), fontWeight: FontWeight.w600, fontSize: 13),
+              style: TextStyle(
+                color: darkText.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -396,21 +548,34 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
             controller: controller,
             keyboardType: TextInputType.number,
             inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly, // Impede a digitação de letras e sinal de negativo (-)
+              FilteringTextInputFormatter
+                  .digitsOnly, // Impede a digitação de letras e sinal de negativo (-)
               _NumericalRangeFormatter(min: 0, max: maxVal),
             ],
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: darkText.withValues(alpha: 0.4), fontSize: 15),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              hintStyle: TextStyle(
+                color: darkText.withValues(alpha: 0.4),
+                fontSize: 15,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 14,
+              ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2D9F3), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE2D9F3),
+                  width: 1.5,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF5B3089), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFF5B3089),
+                  width: 1.5,
+                ),
               ),
             ),
             style: TextStyle(color: darkText, fontSize: 15),
@@ -419,7 +584,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: darkText, fontWeight: FontWeight.w600, fontSize: 15),
+          style: TextStyle(
+            color: darkText,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
       ],
     );
@@ -438,7 +607,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(color: darkText.withValues(alpha: 0.7), fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(
+            color: darkText.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
         ),
         const SizedBox(height: 8),
         InkWell(
@@ -469,7 +642,14 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Tipo de Crise', style: TextStyle(color: darkText.withValues(alpha: 0.7), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          'Tipo de Crise',
+          style: TextStyle(
+            color: darkText.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -483,7 +663,10 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
               value: _tipoCriseSelecionado,
               hint: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('Selecione o tipo', style: TextStyle(color: darkText, fontSize: 15)),
+                child: Text(
+                  'Selecione o tipo',
+                  style: TextStyle(color: darkText, fontSize: 15),
+                ),
               ),
               icon: Padding(
                 padding: const EdgeInsets.only(right: 16.0),
@@ -494,7 +677,10 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                   value: tipo,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(tipo, style: TextStyle(color: darkText, fontSize: 15)),
+                    child: Text(
+                      tipo,
+                      style: TextStyle(color: darkText, fontSize: 15),
+                    ),
                   ),
                 );
               }).toList(),
@@ -518,9 +704,9 @@ class _NumericalRangeFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue;
     }

@@ -22,8 +22,41 @@ class DatabaseHelper {
   // v1 = Sprint 1 (Botão de Crise: paciente + crise sem atividade_antes_crise)
   // v2 = Sprint 2 (Diário de Crises: + coluna atividade_antes_crise)
   // v3 = Sprint 3 (Contatos de Emergência: + tabela contato_emergencia)
-  static const int _dbVersion = 3;
+  // v4 = Diário de Crises (entidade própria): catálogos de sintomas,
+  //      gatilhos e medicamentos + relações N:N com diario e crise.
+  static const int _dbVersion = 4;
   static const String _dbFileName = 'epicontrole.db';
+
+  static const List<String> _seedSintomas = [
+    'Confusão mental',
+    'Perda de consciência',
+    'Rigidez muscular',
+    'Abalos/convulsões',
+    'Salivação excessiva',
+    'Mordedura de língua',
+    'Fadiga',
+    'Dor de cabeça',
+  ];
+
+  static const List<String> _seedGatilhos = [
+    'Privação de sono',
+    'Estresse',
+    'Luzes piscantes/fotossensibilidade',
+    'Consumo de álcool',
+    'Esquecimento de medicação',
+    'Febre',
+    'Menstruação',
+  ];
+
+  static const List<String> _seedMedicamentos = [
+    'Ácido Valproico',
+    'Carbamazepina',
+    'Levetiracetam',
+    'Fenitoína',
+    'Lamotrigina',
+    'Clobazam',
+    'Topiramato',
+  ];
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -54,12 +87,30 @@ class DatabaseHelper {
     await db.execute(AppDatabaseTables.crise);
     await db.execute(AppDatabaseTables.contatoEmergencia);
 
+    await db.execute(AppDatabaseTables.diario);
+    await db.execute(AppDatabaseTables.catalogoSintoma);
+    await db.execute(AppDatabaseTables.catalogoGatilho);
+    await db.execute(AppDatabaseTables.catalogoMedicamento);
+    await db.execute(AppDatabaseTables.diarioSintoma);
+    await db.execute(AppDatabaseTables.diarioGatilho);
+    await db.execute(AppDatabaseTables.criseSintoma);
+    await db.execute(AppDatabaseTables.criseGatilho);
+    await db.execute(AppDatabaseTables.criseMedicamento);
+
+    await db.execute(AppDatabaseTables.idxDiarioSintomaSintoma);
+    await db.execute(AppDatabaseTables.idxDiarioGatilhoGatilho);
+    await db.execute(AppDatabaseTables.idxCriseSintomaSintoma);
+    await db.execute(AppDatabaseTables.idxCriseGatilhoGatilho);
+    await db.execute(AppDatabaseTables.idxCriseMedicamentoCatalogo);
+
     // Paciente local único (v1 = app sem login/nuvem, RNF06).
     // Importante: usa o datetime() do próprio SQLite.
     await db.rawInsert(
       "INSERT INTO paciente (id_paciente, nome, data_cadastro) "
       "VALUES (1, 'Usuário Local', datetime('now'))",
     );
+
+    await _seedCatalogos(db);
   }
 
   /// Executado quando o app já tem um banco instalado numa versão antiga.
@@ -69,9 +120,52 @@ class DatabaseHelper {
       await db.execute(AppDatabaseTables.addColunaAtividadeAntesCrise);
     }
     if (oldVersion < 3) {
-        // Sprint 3 — tela "Contatos de Emergência": tabela nova
-        await db.execute(AppDatabaseTables.contatoEmergencia);
-      }
+      // Sprint 3 — tela "Contatos de Emergência": tabela nova
+      await db.execute(AppDatabaseTables.contatoEmergencia);
+    }
+    if (oldVersion < 4) {
+      // Diário de Crises como entidade própria + catálogos + relações N:N
+      await db.execute(AppDatabaseTables.diario);
+      await db.execute(AppDatabaseTables.catalogoSintoma);
+      await db.execute(AppDatabaseTables.catalogoGatilho);
+      await db.execute(AppDatabaseTables.catalogoMedicamento);
+      await db.execute(AppDatabaseTables.diarioSintoma);
+      await db.execute(AppDatabaseTables.diarioGatilho);
+      await db.execute(AppDatabaseTables.criseSintoma);
+      await db.execute(AppDatabaseTables.criseGatilho);
+      await db.execute(AppDatabaseTables.criseMedicamento);
+
+      await db.execute(AppDatabaseTables.idxDiarioSintomaSintoma);
+      await db.execute(AppDatabaseTables.idxDiarioGatilhoGatilho);
+      await db.execute(AppDatabaseTables.idxCriseSintomaSintoma);
+      await db.execute(AppDatabaseTables.idxCriseGatilhoGatilho);
+      await db.execute(AppDatabaseTables.idxCriseMedicamentoCatalogo);
+
+      await _seedCatalogos(db);
+    }
+  }
+
+  /// Popula os catálogos com valores iniciais comuns em epilepsia.
+  /// Usa conflictAlgorithm.ignore (a coluna nome é UNIQUE) para ser
+  /// seguro rodar mais de uma vez sem duplicar linhas.
+  Future<void> _seedCatalogos(Database db) async {
+    final batch = db.batch();
+    for (final nome in _seedSintomas) {
+      batch.insert('catalogo_sintoma', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+    for (final nome in _seedGatilhos) {
+      batch.insert('catalogo_gatilho', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+    for (final nome in _seedMedicamentos) {
+      batch.insert('catalogo_medicamento', {
+        'nome': nome,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+    await batch.commit(noResult: true);
   }
 
   /// Fecha a conexão sem reabrir o banco à toa.

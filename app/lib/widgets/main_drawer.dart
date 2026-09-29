@@ -50,19 +50,6 @@ class MainDrawer extends StatelessWidget {
               onSelectInicio?.call(); // Vai para a aba do Botão de Crise
             },
           ),
-                 ListTile(
-            leading: const Icon(Icons.book_outlined),
-            title: const Text('Diário de Crises'),
-            onTap: () {
-              Navigator.pop(context); // Fecha o drawer
-              Navigator.of(context).push(DiarioScreen.route());
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.medical_services_outlined),
-            title: const Text('Medicamentos'),
-            onTap: () => _navigateToMock(context, 'Medicamentos'),
-          ),
           ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Relatórios'),
