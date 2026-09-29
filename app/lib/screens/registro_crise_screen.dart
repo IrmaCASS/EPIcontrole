@@ -186,91 +186,97 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
 
   // --- FUNÇÃO PRINCIPAL: Salvar o Registro ---
   Future<void> _salvarRegistro() async {
-    final dataInicio = DateTime(
-      _dataSelecionada.year,
-      _dataSelecionada.month,
-      _dataSelecionada.day,
-      _horaSelecionada.hour,
-      _horaSelecionada.minute,
-    );
+    try {
+      final dataInicio = DateTime(
+        _dataSelecionada.year,
+        _dataSelecionada.month,
+        _dataSelecionada.day,
+        _horaSelecionada.hour,
+        _horaSelecionada.minute,
+      );
 
-    final int minutos = int.tryParse(_minutosController.text) ?? 0;
-    final int segundos = int.tryParse(_segundosController.text) ?? 0;
-    final int totalSegundos = (minutos * 60) + segundos;
+      final int minutos = int.tryParse(_minutosController.text) ?? 0;
+      final int segundos = int.tryParse(_segundosController.text) ?? 0;
+      final int totalSegundos = (minutos * 60) + segundos;
 
-    final novaCrise = CriseModel(
-      dataHoraInicio: dataInicio,
-      duracao: Duration(seconds: totalSegundos),
-      tipoCrise: _tipoCriseSelecionado,
-      atividadeAntesCrise: _atividadeSelecionada,
-      prodromosAuras: _prepararStringSelecoes(
-        _avisosSelecionados,
-        _outroAvisoController,
-      ),
-      desencadeantes: _prepararStringSelecoes(
-        _gatilhosSelecionados,
-        _outroGatilhoController,
-      ),
-      estadoPosIctal: _prepararStringSelecoes(
-        _condicoesPosCriseSelecionadas,
-        _outroPosCriseController,
-      ),
-    );
+      final novaCrise = CriseModel(
+        dataHoraInicio: dataInicio,
+        duracao: Duration(seconds: totalSegundos),
+        tipoCrise: _tipoCriseSelecionado,
+        atividadeAntesCrise: _atividadeSelecionada,
+        prodromosAuras: _prepararStringSelecoes(
+          _avisosSelecionados,
+          _outroAvisoController,
+        ),
+        desencadeantes: _prepararStringSelecoes(
+          _gatilhosSelecionados,
+          _outroGatilhoController,
+        ),
+        estadoPosIctal: _prepararStringSelecoes(
+          _condicoesPosCriseSelecionadas,
+          _outroPosCriseController,
+        ),
+      );
 
-    final criseRepository = ref.read(criseRepositoryProvider);
-    final diarioRepository = ref.read(diarioRepositoryProvider);
+      final criseRepository = ref.read(criseRepositoryProvider);
+      final diarioRepository = ref.read(diarioRepositoryProvider);
 
-    // 1) Insere a crise e pega o id gerado
-    final idCrise = await criseRepository.inserirCrise(novaCrise);
+      final idCrise = await criseRepository.inserirCrise(novaCrise);
 
-    // 2) Vincula o catálogo N:N na crise (Sintomas / Gatilhos / Medicamentos)
-    for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
-      final id = _sintomasIds[nome];
-      if (id != null) {
-        await diarioRepository.vincularSintomaACrise(idCrise, id);
+      // 2) Vincula o catálogo N:N na crise (Sintomas / Gatilhos / Medicamentos)
+      for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
+        final id = _sintomasIds[nome];
+        if (id != null) {
+          await diarioRepository.vincularSintomaACrise(idCrise, id);
+        }
       }
-    }
-    for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
-      final id = _gatilhosIds[nome];
-      if (id != null) {
-        await diarioRepository.vincularGatilhoACrise(idCrise, id);
+      for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
+        final id = _gatilhosIds[nome];
+        if (id != null) {
+          await diarioRepository.vincularGatilhoACrise(idCrise, id);
+        }
       }
-    }
-    for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
-      final id = _medicamentosIds[nome];
-      if (id != null) {
-        await diarioRepository.vincularMedicamentoACrise(idCrise, id);
+      for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
+        final id = _medicamentosIds[nome];
+        if (id != null) {
+          await diarioRepository.vincularMedicamentoACrise(idCrise, id);
+        }
       }
+
+      // 3) Cria a entrada do diário com os MESMOS sintomas e gatilhos (N:N)
+      final idsSintomas = _sintomasSelecionados
+          .where((e) => e != 'Outro')
+          .map((e) => _sintomasIds[e])
+          .whereType<int>()
+          .toList();
+      final idsGatilhos = _gatilhosSelecionados
+          .where((e) => e != 'Outro')
+          .map((e) => _gatilhosIds[e])
+          .whereType<int>()
+          .toList();
+
+      final novoDiario = DiarioModel(
+        idPaciente: novaCrise.idPaciente,
+        dataHora: dataInicio,
+        anotacoes: _condicoesPosCriseSelecionadas.join(', '),
+      );
+      final idDiario = await diarioRepository.inserirDiarioComRelacoes(
+        novoDiario,
+        idsSintomas: idsSintomas,
+        idsGatilhos: idsGatilhos,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Crise registrada e vinculada ao diário')),
+      );
+      Navigator.pop(context);
+    } catch (e, stackTrace) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar: $e')));
     }
-
-    // 3) Cria a entrada do diário com os MESMOS sintomas e gatilhos (N:N)
-    final idsSintomas = _sintomasSelecionados
-        .where((e) => e != 'Outro')
-        .map((e) => _sintomasIds[e])
-        .whereType<int>()
-        .toList();
-    final idsGatilhos = _gatilhosSelecionados
-        .where((e) => e != 'Outro')
-        .map((e) => _gatilhosIds[e])
-        .whereType<int>()
-        .toList();
-
-    final novoDiario = DiarioModel(
-      idPaciente: novaCrise.idPaciente,
-      dataHora: dataInicio,
-      anotacoes: _condicoesPosCriseSelecionadas.join(', '),
-    );
-    await diarioRepository.inserirDiarioComRelacoes(
-      novoDiario,
-      idsSintomas: idsSintomas,
-      idsGatilhos: idsGatilhos,
-    );
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Crise registrada e vinculada ao diário')),
-    );
-    Navigator.pop(context);
   }
 
   // ============================================================================
