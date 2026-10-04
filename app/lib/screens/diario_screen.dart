@@ -5,6 +5,7 @@ import 'package:app/theme/app_theme.dart';
 import 'package:app/widgets/empty_state_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/providers/registro_crise_provider.dart';
+import 'package:app/screens/detalhes_crise_screen.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE DIÁRIO DE CRISES
@@ -361,7 +362,10 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
         Icons.chevron_right,
         color: darkText.withValues(alpha: 0.4),
       ),
-      onTap: () {},
+      onTap: () {
+        //  Navega para a tela de Detalhamento
+        Navigator.of(context).push(DetalhesCriseScreen.route(crise));
+      },
     );
   }
 
