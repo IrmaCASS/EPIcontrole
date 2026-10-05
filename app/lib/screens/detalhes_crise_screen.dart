@@ -1,9 +1,11 @@
+// Arquivo: lib/screens/detalhes_crise_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/crise_model.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/providers/registro_crise_provider.dart';
 import 'package:app/screens/registro_crise_screen.dart';
+import 'package:app/widgets/custom_floating_button.dart';
 
 // ============================================================================
 //TELA DE DETALHES DA CRISE
@@ -222,26 +224,28 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
           ],
         ),
       ),
-      // BOTÕES FLUTUANTES (EDIÇÃO E EXCLUSÃO)
-      // Usando o tooltip nativo que aparece a legenda apenas quando segurado (long press)
+
+      // BOTÕES FLUTUANTES (EDIÇÃO E EXCLUSÃO) - AGORA USANDO O WIDGET
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          CustomFloatingButton(
             heroTag: 'btnEditar',
-            backgroundColor: AppTheme.primaryPurple,
-            tooltip: 'Editar Crise', // Aparece ao segurar o botão
+            legenda: 'Editar Crise', // Será usado no tooltip
+            icone: Icons.edit_outlined,
+            corTema: AppTheme.primaryPurple,
             onPressed: _editarCrise,
-            child: const Icon(Icons.edit_outlined, color: Colors.white),
+            isExpanded: false, // Oculta o texto lateral, ativando apenas ao segurar (tooltip)
           ),
           const SizedBox(height: 16),
-          FloatingActionButton(
+          CustomFloatingButton(
             heroTag: 'btnExcluir',
-            backgroundColor: Colors.red,
-            tooltip: 'Excluir Crise', // Aparece ao segurar o botão
+            legenda: 'Excluir Crise', // Será usado no tooltip
+            icone: Icons.delete_outline,
+            corTema: Colors.red,
             onPressed: _excluirCrise,
-            child: const Icon(Icons.delete_outline, color: Colors.white),
+            isExpanded: false, // Oculta o texto lateral, ativando apenas ao segurar (tooltip)
           ),
         ],
       ),
@@ -309,7 +313,6 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
       dadosConcatenados = 'Não informado';
     }
 
-    // O banco salva itens separados por vírgula (ex: "Estresse, Febre, Outro (susto)")
     final itens = dadosConcatenados.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
     return Column(
