@@ -1,7 +1,6 @@
-// Arquivo: lib/screens/detalhes_crise_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app/models/crise_model.dart';
+import 'package:app/models/crise_completa.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/providers/registro_crise_provider.dart';
 import 'package:app/screens/registro_crise_screen.dart';
@@ -12,14 +11,14 @@ import 'package:app/widgets/custom_floating_button.dart';
 // Exibe todos os dados registrados de uma crise específica e edição/exclusão.
 // ============================================================================
 class DetalhesCriseScreen extends ConsumerStatefulWidget {
-  final CriseModel crise;
+  final CriseCompleta criseCompleta;
 
-  const DetalhesCriseScreen({super.key, required this.crise});
+  const DetalhesCriseScreen({super.key, required this.criseCompleta});
 
   // Metodo para navegação
-  static Route route(CriseModel crise) {
+  static Route route(CriseCompleta criseCompleta) {
     return MaterialPageRoute(
-      builder: (_) => DetalhesCriseScreen(crise: crise),
+      builder: (_) => DetalhesCriseScreen(criseCompleta: criseCompleta),
     );
   }
 
@@ -30,10 +29,29 @@ class DetalhesCriseScreen extends ConsumerStatefulWidget {
 class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
   final Color darkText = const Color(0xFF2B1C4C);
 
+
+  // FUNÇÃO AUXILIAR PARA MESCLAR DADOS (CATÁLOGO + TEXTO LIVRE)
+  /// Pega os nomes dos itens do catálogo (N:N) e junta com o texto livre
+  String _mesclarListas(List<String> itensCatalogo, String? textoLivre) {
+    List<String> todosItens = [...itensCatalogo];
+
+    if (textoLivre != null && textoLivre.trim().isNotEmpty) {
+      final partesTexto = textoLivre.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+      todosItens.addAll(partesTexto);
+    }
+
+    if (todosItens.isEmpty) return 'Não informado';
+
+    // toSet() remove duplicatas caso um mesmo item acabe existindo nas duas fontes
+    return todosItens.toSet().join(', ');
+  }
+
   // ============================================================================
   // INTEGRAÇÃO COM BACKEND: EXCLUSÃO
   // ============================================================================
   Future<void> _excluirCrise() async {
+    final criseBase = widget.criseCompleta.crise;
+
     // Exibe um modal de confirmação antes de apagar do banco de dados local
     final confirmar = await showDialog<bool>(
       context: context,
@@ -57,14 +75,14 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
     if (confirmar == true) {
       try {
         /*
-        // TODO: BACKEND - PASSO A PASSO PARA EXCLUSÃO:
-        // 1. Chamar o repositório para deletar a crise no banco local usando o ID.
-        // Exemplo: await ref.read(criseRepositoryProvider).deletarCrise(widget.crise.idCrise!);
+        // TODO: BACKEND - EXCLUSÃO:
+        // Chamar o repositório para deletar a crise no banco local usando o ID.
+        // Exemplo: await ref.read(criseRepositoryProvider).deletarCrise(criseBase.idCrise!);
 
-        // 2. Deletar também o registro no Diário (DiarioModel) associado,
+        // Deletar também o registro no Diário (DiarioModel) associado,
         // ou garantir que o banco de dados faça isso via ON DELETE CASCADE
 
-        // 3. Atualizar o calendário da tela anterior emitindo um sinal:
+        // Atualizar o calendário da tela anterior emitindo um sinal:
         refreshDiarioNotifier.value++;
         */
 
@@ -89,55 +107,70 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
   // INTEGRAÇÃO COM BACKEND: EDIÇÃO
   // ============================================================================
   Future<void> _editarCrise() async{
-    /*
-    // TODO: BACKEND - PASSO A PASSO PARA EDIÇÃO:
-    // 1. Navegar para a tela `RegistroCriseScreen` (ou uma nova `EdicaoCriseScreen`).
-    // 2. Você precisará alterar o construtor da tela de registro para aceitar um objeto `CriseModel? criseExistente`.
-    // 3. Se `criseExistente` não for nulo, os `TextEditingControllers` e variáveis da tela
-    //    devem ser inicializados com os valores do banco no `initState`.
-    // 4. Ao salvar na outra tela, use um método de UPDATE no banco ao invés de INSERT.
-
-    // Exemplo de navegação aguardando o retorno para atualizar esta tela:
-    // final atualizou = await Navigator.push(context, RegistroCriseScreen.route(crise: widget.crise));
-    // if (atualizou == true) {
-    //    setState(() { /* recarregar dados da crise do banco */ });
-    //    refreshDiarioNotifier.value++;
-    // }
-    */
-
+    final criseBase = widget.criseCompleta.crise;
     // Salva o valor atual do notificador para saber se houve alteração
     final notificacaoAnterior = refreshDiarioNotifier.value;
 
-    // Navega para a tela de Registro passando a crise atual
+    // Navega para a tela de Registro passando a crise atual para edição
     await Navigator.push(
       context,
-      RegistroCriseScreen.route(crise: widget.crise),
+      RegistroCriseScreen.route(crise: criseBase),
     );
 
-    // Quando voltar, verifica se a tela ainda está montada e se o notificador mudou (ou seja, se salvou)
+    // Quando voltar, verifica se a tela ainda está montada e se o notificador mudou
     if (mounted && refreshDiarioNotifier.value > notificacaoAnterior) {
       // Fecha a tela de detalhes para voltar ao Diário, que recarregará os dados novos automaticamente
       Navigator.pop(context);
     }
 
+    /*
+    // TODO: BACKEND - EDIÇÃO:.
+    // Ao salvar na outra tela, use um método de UPDATE no banco ao invés de INSERT.
+    // Exemplo de navegação aguardando o retorno para atualizar esta tela:
+    // final atualizou = await Navigator.push(context, RegistroCriseScreen.route(crise: widget.crise));
+    // if (atualizou == true) {
+    // setState(() { /* recarregar dados da crise do banco */ });
+    // refreshDiarioNotifier.value++;
+    // }
+    */
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Função de edição será implementada na integração.')),
+      const SnackBar(content: Text('Função de edição ainda nao implementada')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Atalho para o modelo base
+    final crise = widget.criseCompleta.crise;
+
     // Formatação de data e hora
-    final dataStr = '${widget.crise.dataHoraInicio.day.toString().padLeft(2, '0')}/${widget.crise.dataHoraInicio.month.toString().padLeft(2, '0')}/${widget.crise.dataHoraInicio.year}';
-    final horaStr = '${widget.crise.dataHoraInicio.hour.toString().padLeft(2, '0')}:${widget.crise.dataHoraInicio.minute.toString().padLeft(2, '0')}';
+    final dataStr = '${crise.dataHoraInicio.day.toString().padLeft(2, '0')}/${crise.dataHoraInicio.month.toString().padLeft(2, '0')}/${crise.dataHoraInicio.year}';
+    final horaStr = '${crise.dataHoraInicio.hour.toString().padLeft(2, '0')}:${crise.dataHoraInicio.minute.toString().padLeft(2, '0')}';
 
     // Formatação de duração
     String duracaoStr = 'Não informada';
-    if (widget.crise.duracao != null && widget.crise.duracao!.inSeconds > 0) {
-      final m = widget.crise.duracao!.inMinutes;
-      final s = widget.crise.duracao!.inSeconds % 60;
+    if (crise.duracao != null && crise.duracao!.inSeconds > 0) {
+      final m = crise.duracao!.inMinutes;
+      final s = crise.duracao!.inSeconds % 60;
       duracaoStr = '${m}m${s}s';
     }
+
+    // Mesclando dados das relações N:N com os textos livres
+    final sintomasMesclados = _mesclarListas(
+      widget.criseCompleta.sintomas.map((s) => s.nome).toList(),
+      crise.sintomas,
+    );
+
+    final gatilhosMesclados = _mesclarListas(
+      widget.criseCompleta.gatilhos.map((g) => g.nome).toList(),
+      crise.desencadeantes,
+    );
+
+    final medicamentosMesclados = _mesclarListas(
+      widget.criseCompleta.medicamentos.map((m) => m.nome).toList(),
+      null,
+    );
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
@@ -151,7 +184,6 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        // Padding inferior aumentado (160.0) para os botões flutuantes não ficarem em cima do conteúdo no fim da rolagem
         padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 160.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,11 +203,11 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
                 Row(
                   children: [
                     Expanded(child: _buildDadoBasico('Duração', duracaoStr)),
-                    Expanded(child: _buildDadoBasico('Tipo', widget.crise.tipoCrise ?? 'Não informado')),
+                    Expanded(child: _buildDadoBasico('Tipo', crise.tipoCrise ?? 'Não informado')),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildDadoBasico('Atividade antes da crise', widget.crise.atividadeAntesCrise ?? 'Não informada'),
+                _buildDadoBasico('Atividade antes da crise', crise.atividadeAntesCrise ?? 'Não informada'),
               ],
             ),
             const SizedBox(height: 16),
@@ -185,38 +217,46 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
               children: [
                 _buildCabecalhoSecao(Icons.healing_outlined, 'Detalhamento Clínico', const Color(0xFF8E62AE)),
                 const SizedBox(height: 16),
-                _buildSecaoLista('Avisos / Auras', widget.crise.prodromosAuras, const Color(0xFF8E62AE)),
+                _buildSecaoLista('Avisos / Auras', crise.prodromosAuras, const Color(0xFF8E62AE)),
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Divider(color: Color(0xFFE2D9F3))),
 
-                // NOTA: No CriseModel (Diagrama de Classe) os sintomas não estão no modelo base como String simples,
-                // eles vêm do N:N. Se seu backend agrupar isso em uma String, passe aqui.
-                // Como exemplo, usarei os prodromos, mas deve ser substituído pelo atributo de sintomas quando populado.
-                _buildSecaoLista('Sintomas durante a crise', widget.crise.sintomas ?? 'Nenhum registrado', const Color(0xFF5B3089)),
+                _buildSecaoLista('Sintomas durante a crise', sintomasMesclados, const Color(0xFF5B3089)),
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Divider(color: Color(0xFFE2D9F3))),
 
-                _buildSecaoLista('Condição Pós-Crise', widget.crise.estadoPosIctal, const Color(0xFF3F8241)),
+                _buildSecaoLista('Condição Pós-Crise', crise.estadoPosIctal, const Color(0xFF3F8241)),
               ],
             ),
             const SizedBox(height: 16),
 
-            // 3. CARD DE GATILHOS
+            // CARD DE GATILHOS
             _buildInfoCard(
               children: [
                 _buildCabecalhoSecao(Icons.error_outline, 'Possíveis Gatilhos', const Color(0xFFD67733)),
                 const SizedBox(height: 16),
-                _buildSecaoLista(null, widget.crise.desencadeantes, const Color(0xFFD67733)),
+                // Usando os gatilhos corretamente mesclados do catálogo + texto
+                _buildSecaoLista(null, gatilhosMesclados, const Color(0xFFD67733)),
               ],
             ),
             const SizedBox(height: 16),
 
-            // 4. CARD DE ANOTAÇÕES LIVRES
-            if (widget.crise.anotacoes != null && widget.crise.anotacoes!.isNotEmpty)
+            // CARD DE MEDICAMENTOS USADO
+            _buildInfoCard(
+              children: [
+                _buildCabecalhoSecao(Icons.medication_outlined, 'Medicamentos Usados', const Color(0xFF27AE60)),
+                const SizedBox(height: 16),
+                _buildSecaoLista(null, medicamentosMesclados, const Color(0xFF27AE60)),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            //CARD DE ANOTAÇÕES LIVRES
+            if (crise.anotacoes != null && crise.anotacoes!.isNotEmpty)
               _buildInfoCard(
                 children: [
                   _buildCabecalhoSecao(Icons.notes, 'Anotações Livres', const Color(0xFF4F4F4F)),
                   const SizedBox(height: 16),
                   Text(
-                    widget.crise.anotacoes!,
+                    crise.anotacoes!,
                     style: TextStyle(color: darkText.withValues(alpha: 0.8), fontSize: 15, height: 1.4),
                   ),
                 ],
@@ -225,27 +265,27 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
         ),
       ),
 
-      // BOTÕES FLUTUANTES (EDIÇÃO E EXCLUSÃO) - AGORA USANDO O WIDGET
+      // BOTÕES FLUTUANTES (EDIÇÃO E EXCLUSÃO)
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           CustomFloatingButton(
             heroTag: 'btnEditar',
-            legenda: 'Editar Crise', // Será usado no tooltip
+            legenda: 'Editar Crise',
             icone: Icons.edit_outlined,
             corTema: AppTheme.primaryPurple,
             onPressed: _editarCrise,
-            isExpanded: false, // Oculta o texto lateral, ativando apenas ao segurar (tooltip)
+            isExpanded: false,
           ),
           const SizedBox(height: 16),
           CustomFloatingButton(
             heroTag: 'btnExcluir',
-            legenda: 'Excluir Crise', // Será usado no tooltip
+            legenda: 'Excluir Crise',
             icone: Icons.delete_outline,
             corTema: Colors.red,
             onPressed: _excluirCrise,
-            isExpanded: false, // Oculta o texto lateral, ativando apenas ao segurar (tooltip)
+            isExpanded: false,
           ),
         ],
       ),

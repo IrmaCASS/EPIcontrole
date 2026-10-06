@@ -1,3 +1,4 @@
+// Arquivo: lib/screens/registro_crise_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/crise_model.dart';
@@ -63,7 +64,6 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Ausência',
     'Mioclônica',
     'Atônica',
-    'Outro',
   ];
 
   final List<String> avisos = [
@@ -72,18 +72,6 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Alteração da visão',
     'Desconforto no estômago',
     'Medo',
-    'Outro',
-  ];
-
-  final List<String> gatilhos = [
-    'Estresse emocional',
-    'Privação de sono',
-    'Esquecimento da medicação',
-    'Luzes piscantes',
-    'Período menstrual',
-    'Febre',
-    'Consumo de álcool',
-    'Exercício intenso',
     'Outro',
   ];
 
@@ -99,8 +87,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   ];
 
   // Opções carregadas do catálogo v4 (populadas no initState).
-  List<String> _sintomasCatalogo = [];
-  List<String> _gatilhosCatalogo = [];
+  // INCLUSÃO: Inicializadas com 'Outro' para garantir que o campo apareça mesmo se o banco estiver vazio.
+  List<String> _sintomasCatalogo = ['Outro'];
+  List<String> _gatilhosCatalogo = ['Outro'];
   List<String> _medicamentosCatalogo = [];
 
   // Guarda os ids do catálogo para vincular nas relações N:N no save.
@@ -139,9 +128,6 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       _popularSetEOutro(crise.desencadeantes, _gatilhosSelecionados, _outroGatilhoController);
       _popularSetEOutro(crise.sintomas, _sintomasSelecionados, _outroSintomaController);
       _popularSetEOutro(crise.estadoPosIctal, _condicoesPosCriseSelecionadas, _outroPosCriseController);
-
-      // OBS: Os medicamentos (se existissem na classe base CriseModel como String)
-      // seriam populados aqui também.
     }
     // ========================================================================
     // LÓGICA DE CRIAÇÃO: Buscar dados do Botão de Crise
@@ -187,11 +173,14 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       final sintomas = await diarioRepository.buscarSintomas();
       final gatilhos = await diarioRepository.buscarGatilhos();
       final medicamentos = await diarioRepository.buscarMedicamentos();
+
       if (!mounted) return;
+
       setState(() {
-        _sintomasCatalogo = [for (final s in sintomas) s.nome];
-        _gatilhosCatalogo = [for (final g in gatilhos) g.nome];
+        _sintomasCatalogo = [for (final s in sintomas) s.nome, 'Outro'];
+        _gatilhosCatalogo = [for (final g in gatilhos) g.nome, 'Outro'];
         _medicamentosCatalogo = [for (final m in medicamentos) m.nome];
+
         _sintomasIds = {for (final s in sintomas) s.nome: s.idSintoma!};
         _gatilhosIds = {for (final g in gatilhos) g.nome: g.idGatilho!};
         _medicamentosIds = {
@@ -199,7 +188,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         };
       });
     } catch (_) {
-      // Sem catálogo disponível, a tela segue com as listas vazias.
+      // Sem catálogo disponível, a tela segue com as listas apenas com 'Outro'
     }
   }
 
@@ -329,7 +318,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         // E logo após "limpar", você usaria o mesmo código do bloco (if) lá em cima
         // para vincular os novos Checkboxes escolhidos (vincularSintomaACrise, etc).
 
-        // Você também precisaria localizar e atualizar o DiarioModel equivalente.
+        // também precisaria localizar e atualizar o DiarioModel equivalente.
       }
 
       if (!mounted) return;
