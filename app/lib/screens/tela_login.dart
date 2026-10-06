@@ -81,8 +81,14 @@ class _TelaLoginState extends State<TelaLogin> {
       );
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const TabsScreen(),
+        MaterialPageRoute(builder: (context) => const TabsScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(resultado.mensagem),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -106,7 +112,10 @@ class _TelaLoginState extends State<TelaLogin> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 28.0,
+              vertical: 12.0,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
@@ -167,7 +176,8 @@ class _TelaLoginState extends State<TelaLogin> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -185,7 +195,9 @@ class _TelaLoginState extends State<TelaLogin> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _senhaOculta ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _senhaOculta
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
                             setState(() {
@@ -197,7 +209,8 @@ class _TelaLoginState extends State<TelaLogin> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -221,7 +234,10 @@ class _TelaLoginState extends State<TelaLogin> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text('Lembrar de mim', style: theme.textTheme.bodySmall),
+                            Text(
+                              'Lembrar de mim',
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ],
                         ),
                         TextButton(
