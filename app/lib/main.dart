@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:app/theme/app_theme.dart';
-import 'package:app/screens/tabs_screen.dart';
+import 'package:app/screens/tela_boas_vindas.dart';
 import 'package:app/database/database_helper.dart';
 
 void main() async {
@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EpiControle',
-      home: const TabsScreen(),
+      home: const TelaBoasVindas(),
       theme: AppTheme.lightTheme,
       //darkTheme: AppBarTheme.darkTheme,
       //themeMode: ThemeMode.system,
