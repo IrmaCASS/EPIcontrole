@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/screens/tela_boas_vindas.dart';
 import 'package:app/database/database_helper.dart';
+import 'package:app/screens/tela_splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,11 +16,7 @@ void main() async {
   // Sem isso, o banco só nasce quando alguém usa um repositório.
   await DatabaseHelper.instance.database;
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -30,8 +27,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EpiControle',
-      home: const TelaBoasVindas(),
+      home: const TelaSplash(),
       theme: AppTheme.lightTheme,
+
       //darkTheme: AppBarTheme.darkTheme,
       //themeMode: ThemeMode.system,
 
@@ -50,11 +48,9 @@ class MyApp extends StatelessWidget {
       // tested with just a hot reload.
       //colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       //),
-
     );
   }
 }
-
 
 //
 // class MyHomePage extends StatefulWidget {

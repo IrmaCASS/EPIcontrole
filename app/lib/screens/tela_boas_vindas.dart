@@ -17,7 +17,10 @@ class TelaBoasVindas extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 28.0,
+              vertical: 32.0,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
@@ -34,7 +37,9 @@ class TelaBoasVindas extends StatelessWidget {
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.25,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -56,62 +61,26 @@ class TelaBoasVindas extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Título e Descrição
+                  // Título principal
                   Text(
-                    'Bem-vindo ao EpiControle',
+                    'Seu diário de crises,',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineLarge?.copyWith(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 10),
                   Text(
-                    'Acesse sua conta para continuar ou crie um novo cadastro em instantes.',
+                    'sempre com você.',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.4,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 36),
-
-                  // Cartão informativo
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.bolt, color: theme.colorScheme.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Auto-cuidado e Controle',
-                                style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'Acompanhe seu diário, medicamentos e crises com facilidade.',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
 
                   // Botão 1: Fazer Login
                   SizedBox(
@@ -119,13 +88,18 @@ class TelaBoasVindas extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const TelaLogin()),
+                          MaterialPageRoute(
+                            builder: (context) => const TelaLogin(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.login),
                       label: const Text(
                         'Fazer Login',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
@@ -145,19 +119,37 @@ class TelaBoasVindas extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const TelaCadastro()),
+                          MaterialPageRoute(
+                            builder: (context) => const TelaCadastro(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.person_add_outlined),
                       label: const Text(
                         'Criar Nova Conta',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 56),
+
+                  // Frase de apoio (uma linha só, discreta, centralizada)
+                  Text(
+                    'Acompanhe crises e medicamentos com facilidade.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
+                      fontSize: 12,
                     ),
                   ),
                 ],

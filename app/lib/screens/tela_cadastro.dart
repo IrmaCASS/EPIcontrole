@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:app/screens/tabs_screen.dart';
+import 'package:app/screens/onboarding_contato_screen.dart';
 import 'package:app/screens/tela_login.dart';
 import 'package:app/services/auth_service.dart';
 
@@ -19,7 +19,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _confirmarSenhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
 
   bool _senhaOculta = true;
   bool _confirmarSenhaOculta = true;
@@ -84,7 +85,9 @@ class _TelaCadastroState extends State<TelaCadastro> {
     if (!_aceitouTermos) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, concorde com os Termos de Uso e Privacidade.'),
+          content: Text(
+            'Por favor, concorde com os Termos de Uso e Privacidade.',
+          ),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -125,13 +128,17 @@ class _TelaCadastroState extends State<TelaCadastro> {
           ),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
+      // Após o cadastro, vai para o onboarding do contato de emergência.
+      // O onboarding, depois de salvar o contato, é quem leva para a Home.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const TabsScreen(),
+          builder: (context) => const OnboardingContatoScreen(),
         ),
       );
     } else {
@@ -163,7 +170,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 28.0,
+              vertical: 12.0,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
@@ -223,7 +233,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -242,7 +253,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -259,7 +271,9 @@ class _TelaCadastroState extends State<TelaCadastro> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _senhaOculta ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _senhaOculta
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
                             setState(() {
@@ -271,7 +285,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -289,7 +304,9 @@ class _TelaCadastroState extends State<TelaCadastro> {
                         prefixIcon: const Icon(Icons.lock_reset_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _confirmarSenhaOculta ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _confirmarSenhaOculta
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
                             setState(() {
@@ -301,7 +318,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     const SizedBox(height: 12),
