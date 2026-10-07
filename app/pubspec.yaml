@@ -17,6 +17,7 @@ dependencies:
   crypto: ^3.0.7
   intl: ^0.20.3
   table_calendar: ^3.1.2
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -39,10 +40,11 @@ flutter_launcher_icons:
   image_path: "assets/images/logo.jpeg"
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: assets/images/logo.png
+  color: "#4A148C"
+  image: assets/images/logo_transparente.png
   android: true
   ios: true
   android_12:
-    color: "#FFFFFF"
-    image: assets/images/logo.png
+    color: "#4A148C"
+    image: assets/images/logo_transparente.png
+    

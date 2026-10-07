@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:app/repositories/contato_emergencia_repository.dart';
+import 'package:app/screens/onboarding_contato_screen.dart';
 import 'package:app/screens/tabs_screen.dart';
 import 'package:app/screens/tela_cadastro.dart';
 import 'package:app/services/auth_service.dart';
@@ -18,6 +20,9 @@ class _TelaLoginState extends State<TelaLogin> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+
+  final ContatoEmergenciaRepository _contatoRepository =
+      ContatoEmergenciaRepository();
 
   bool _senhaOculta = true;
   bool _carregando = false;
@@ -51,6 +56,12 @@ class _TelaLoginState extends State<TelaLogin> {
     return null;
   }
 
+  /// Verifica se o usuário já tem um contato de emergência cadastrado.
+  Future<bool> _temContatoCadastrado() async {
+    final telefone = await _contatoRepository.buscarTelefonePrincipal();
+    return telefone != null && telefone.trim().isNotEmpty;
+  }
+
   Future<void> _efetuarLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -67,10 +78,6 @@ class _TelaLoginState extends State<TelaLogin> {
 
     if (!mounted) return;
 
-    setState(() {
-      _carregando = false;
-    });
-
     if (resultado.sucesso) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -80,10 +87,28 @@ class _TelaLoginState extends State<TelaLogin> {
         ),
       );
 
+      // Verifica se o usuário já tem contato de emergência cadastrado.
+      // Se NÃO tiver, leva para o onboarding (obrigatório).
+      // Se tiver, vai direto para a Home.
+      final temContato = await _temContatoCadastrado();
+
+      if (!mounted) return;
+
+      setState(() {
+        _carregando = false;
+      });
+
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const TabsScreen()),
+        MaterialPageRoute(
+          builder: (context) =>
+              temContato ? const TabsScreen() : const OnboardingContatoScreen(),
+        ),
       );
     } else {
+      setState(() {
+        _carregando = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(resultado.mensagem),
