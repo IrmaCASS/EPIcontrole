@@ -1,4 +1,5 @@
 // Arquivo: lib/screens/registro_crise_screen.dart
+import 'package:app/models/crise_completa.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/crise_model.dart';
@@ -13,11 +14,12 @@ import 'package:app/models/diario_model.dart';
 // WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE E EDIÇÃO
 // ============================================================================
 class RegistroCriseScreen extends ConsumerStatefulWidget {
-  final CriseModel? criseExistente; // adicionado para permitiri uso da tela para edição
+  final CriseCompleta? criseExistente; // adicionado para permitiri uso da tela para edição
 
   const RegistroCriseScreen({super.key, this.criseExistente});
 
-  static Route route({CriseModel? crise}) {
+  // CORREÇÃO 1: O método route agora espera uma CriseCompleta
+  static Route route({CriseCompleta? crise}) {
     return MaterialPageRoute(builder: (_) => RegistroCriseScreen(criseExistente: crise));
   }
 
@@ -30,6 +32,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   // --- Estados do Formulário (Variáveis básicas de tempo e duração) ---
   DateTime _dataSelecionada = DateTime.now();
   TimeOfDay _horaSelecionada = TimeOfDay.now();
+  Future<void>? _carregamentoCatalogosFuture;
 
   // --- Controladores para Duração ---
   final TextEditingController _minutosController = TextEditingController();
@@ -109,25 +112,34 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     // ========================================================================
     // LÓGICA DE EDIÇÃO: Preencher os dados se estiver editando uma crise
     // ========================================================================
+    _carregamentoCatalogosFuture = _carregarCatalogos();
+
     if (widget.criseExistente != null) {
-      final crise = widget.criseExistente!;
+      // CORREÇÃO 2: Desmembrar a CriseCompleta para usar os dados básicos e as listas corretamente
+      final criseCompleta = widget.criseExistente!;
+      final criseBase = criseCompleta.crise;
 
-      _dataSelecionada = crise.dataHoraInicio;
-      _horaSelecionada = TimeOfDay.fromDateTime(crise.dataHoraInicio);
+      _dataSelecionada = criseBase.dataHoraInicio;
+      _horaSelecionada = TimeOfDay.fromDateTime(criseBase.dataHoraInicio);
 
-      if (crise.duracao != null && crise.duracao!.inSeconds > 0) {
-        _minutosController.text = (crise.duracao!.inSeconds ~/ 60).toString();
-        _segundosController.text = (crise.duracao!.inSeconds % 60).toString();
+      if (criseBase.duracao != null && criseBase.duracao!.inSeconds > 0) {
+        _minutosController.text = (criseBase.duracao!.inSeconds ~/ 60).toString();
+        _segundosController.text = (criseBase.duracao!.inSeconds % 60).toString();
       }
 
-      _tipoCriseSelecionado = crise.tipoCrise;
-      _atividadeSelecionada = crise.atividadeAntesCrise;
+      _tipoCriseSelecionado = criseBase.tipoCrise;
+      _atividadeSelecionada = criseBase.atividadeAntesCrise;
 
       // Restaura as seleções múltiplas separando as strings gravadas no banco
-      _popularSetEOutro(crise.prodromosAuras, _avisosSelecionados, _outroAvisoController);
-      _popularSetEOutro(crise.desencadeantes, _gatilhosSelecionados, _outroGatilhoController);
-      _popularSetEOutro(crise.sintomas, _sintomasSelecionados, _outroSintomaController);
-      _popularSetEOutro(crise.estadoPosIctal, _condicoesPosCriseSelecionadas, _outroPosCriseController);
+      _popularSetEOutro(criseBase.prodromosAuras, _avisosSelecionados, _outroAvisoController);
+      _popularSetEOutro(criseBase.desencadeantes, _gatilhosSelecionados, _outroGatilhoController);
+      _popularSetEOutro(criseBase.sintomas, _sintomasSelecionados, _outroSintomaController);
+      _popularSetEOutro(criseBase.estadoPosIctal, _condicoesPosCriseSelecionadas, _outroPosCriseController);
+
+      // Preenche os medicamentos selecionados diretamente da lista real do banco, sem "Outro"
+      for (final med in criseCompleta.medicamentos) {
+        _medicamentosSelecionados.add(med.nome);
+      }
     }
     // ========================================================================
     // LÓGICA DE CRIAÇÃO: Buscar dados do Botão de Crise
@@ -225,6 +237,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
 
   // --- FUNÇÃO PRINCIPAL: Salvar ou Atualizar o Registro ---
   Future<void> _salvarRegistro() async {
+    // Garante que o catálogo terminou de carregar os IDs antes de tentar vincular
+    if (_carregamentoCatalogosFuture != null) {
+      await _carregamentoCatalogosFuture;
+    }
+
     try {
       final dataInicio = DateTime(
         _dataSelecionada.year,
@@ -239,8 +256,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       final int totalSegundos = (minutos * 60) + segundos;
 
       final novaCrise = CriseModel(
-        idCrise: widget.criseExistente?.idCrise, // Mantém o ID original na edição!
-        idPaciente: widget.criseExistente?.idPaciente ?? 1,
+        // CORREÇÃO 3: Referenciando o caminho correto da classe base para os IDs
+        idCrise: widget.criseExistente?.crise.idCrise, // Mantém o ID original na edição!
+        idPaciente: widget.criseExistente?.crise.idPaciente ?? 1,
         dataHoraInicio: dataInicio,
         duracao: Duration(seconds: totalSegundos),
         tipoCrise: _tipoCriseSelecionado,
@@ -309,16 +327,22 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         await criseRepository.atualizarCrise(novaCrise);
         final idCrise = novaCrise.idCrise!;
 
-        // TODO BACKEND: Para a edição funcionar perfeitamente em produção, você precisará
-        // criar métodos no DiarioRepository para "limpar" as antigas conexões N:N, ex:
-        // await diarioRepository.limparSintomasDaCrise(idCrise);
-        // await diarioRepository.limparGatilhosDaCrise(idCrise);
-        // await diarioRepository.limparMedicamentosDaCrise(idCrise);
+        // Remove os vínculos antigos antes de regravar os que estão marcados agora
+        await diarioRepository.limparVinculosDaCrise(idCrise);
 
-        // E logo após "limpar", você usaria o mesmo código do bloco (if) lá em cima
-        // para vincular os novos Checkboxes escolhidos (vincularSintomaACrise, etc).
-
-        // também precisaria localizar e atualizar o DiarioModel equivalente.
+        // Mesmo código de vínculo do bloco de criação (if) logo acima
+        for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
+          final id = _sintomasIds[nome];
+          if (id != null) await diarioRepository.vincularSintomaACrise(idCrise, id);
+        }
+        for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
+          final id = _gatilhosIds[nome];
+          if (id != null) await diarioRepository.vincularGatilhoACrise(idCrise, id);
+        }
+        for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
+          final id = _medicamentosIds[nome];
+          if (id != null) await diarioRepository.vincularMedicamentoACrise(idCrise, id);
+        }
       }
 
       if (!mounted) return;
@@ -336,7 +360,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         ),
       );
       Navigator.pop(context);
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

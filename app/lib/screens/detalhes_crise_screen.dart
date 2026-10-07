@@ -74,17 +74,8 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
 
     if (confirmar == true) {
       try {
-        /*
-        // TODO: BACKEND - EXCLUSÃO:
-        // Chamar o repositório para deletar a crise no banco local usando o ID.
-        // Exemplo: await ref.read(criseRepositoryProvider).deletarCrise(criseBase.idCrise!);
-
-        // Deletar também o registro no Diário (DiarioModel) associado,
-        // ou garantir que o banco de dados faça isso via ON DELETE CASCADE
-
-        // Atualizar o calendário da tela anterior emitindo um sinal:
+        await ref.read(criseRepositoryProvider).excluirCrise(criseBase.idCrise!);
         refreshDiarioNotifier.value++;
-        */
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -106,37 +97,25 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
   // ============================================================================
   // INTEGRAÇÃO COM BACKEND: EDIÇÃO
   // ============================================================================
-  Future<void> _editarCrise() async{
-    final criseBase = widget.criseCompleta.crise;
+  Future<void> _editarCrise() async {
     // Salva o valor atual do notificador para saber se houve alteração
     final notificacaoAnterior = refreshDiarioNotifier.value;
 
     // Navega para a tela de Registro passando a crise atual para edição
     await Navigator.push(
       context,
-      RegistroCriseScreen.route(crise: criseBase),
+      RegistroCriseScreen.route(crise: widget.criseCompleta),
     );
 
-    // Quando voltar, verifica se a tela ainda está montada e se o notificador mudou
-    if (mounted && refreshDiarioNotifier.value > notificacaoAnterior) {
-      // Fecha a tela de detalhes para voltar ao Diário, que recarregará os dados novos automaticamente
+    if (!mounted) return;
+
+    // O notificador só muda se RegistroCriseScreen realmente salvou a edição
+    // (refreshDiarioNotifier.value++ roda dentro de _salvarRegistro, já incluindo
+    // a limpeza e o revínculo de sintomas/gatilhos/medicamentos no DiarioRepository).
+    if (refreshDiarioNotifier.value > notificacaoAnterior) {
+      // Fecha a tela de detalhes e volta ao Diário, que recarrega os dados
       Navigator.pop(context);
     }
-
-    /*
-    // TODO: BACKEND - EDIÇÃO:.
-    // Ao salvar na outra tela, use um método de UPDATE no banco ao invés de INSERT.
-    // Exemplo de navegação aguardando o retorno para atualizar esta tela:
-    // final atualizou = await Navigator.push(context, RegistroCriseScreen.route(crise: widget.crise));
-    // if (atualizou == true) {
-    // setState(() { /* recarregar dados da crise do banco */ });
-    // refreshDiarioNotifier.value++;
-    // }
-    */
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Função de edição ainda nao implementada')),
-    );
   }
 
   @override
@@ -167,10 +146,9 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
       crise.desencadeantes,
     );
 
-    final medicamentosMesclados = _mesclarListas(
-      widget.criseCompleta.medicamentos.map((m) => m.nome).toList(),
-      null,
-    );
+    final stringMedicamentos = widget.criseCompleta.medicamentos
+        .map((m) => m.nome)
+        .join(', ');
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
@@ -244,7 +222,7 @@ class _DetalhesCriseScreenState extends ConsumerState<DetalhesCriseScreen> {
               children: [
                 _buildCabecalhoSecao(Icons.medication_outlined, 'Medicamentos Usados', const Color(0xFF27AE60)),
                 const SizedBox(height: 16),
-                _buildSecaoLista(null, medicamentosMesclados, const Color(0xFF27AE60)),
+                _buildSecaoLista(null, stringMedicamentos, const Color(0xFF27AE60)),
               ],
             ),
             const SizedBox(height: 16),
