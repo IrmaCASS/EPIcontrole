@@ -74,6 +74,13 @@ class Migrations {
 
       await seedCatalogos(db);
     }
+    if (oldVersion < 5) {
+      // v5 — Medicamentos do paciente + Bloco de Notas.
+      // medicamento vem antes de registro_dose (a FK aponta pra ele).
+      await db.execute(AppDatabaseTables.medicamento);
+      await db.execute(AppDatabaseTables.registroDose);
+      await db.execute(AppDatabaseTables.blocoNotas);
+    }
   }
 
   /// Popula os catálogos com valores iniciais comuns em epilepsia.
