@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/models/medicamento_model.dart';
+import 'package:app/providers/medicamento_provider.dart';
 import 'package:app/widgets/custom_floating_button.dart';
 import 'package:app/screens/registro_medicamento_screen.dart';
 import 'package:app/screens/detalhes_medicamento_screen.dart';
@@ -28,7 +29,7 @@ class _MedicamentoScreenState extends ConsumerState<MedicamentoScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarMedicamentosMock();
+    _carregarMedicamentos();
     _iniciarTimerTexto();
 
     // Mostra o texto novamente sempre que o usuário tocar na tela para rolar
@@ -54,36 +55,12 @@ class _MedicamentoScreenState extends ConsumerState<MedicamentoScreen> {
     });
   }
 
-  // dados para visualizaçao
-  void _carregarMedicamentosMock() {
-    setState(() {
-      medicamentos = [
-        MedicamentoModel(
-          idMedicamento: 1,
-          idPaciente: 1,
-          nome: 'Carbamazepina',
-          dosagem: '200mg',
-          horarios: ['08:00', '20:00'],
-          alertasAtivos: true,
-        ),
-        MedicamentoModel(
-          idMedicamento: 2,
-          idPaciente: 1,
-          nome: 'Ácido Valproico',
-          dosagem: '500mg',
-          horarios: ['08:00', '16:00', '00:00'],
-          alertasAtivos: true,
-        ),
-        MedicamentoModel(
-          idMedicamento: 3,
-          idPaciente: 1,
-          nome: 'Levetiracetam',
-          dosagem: '250mg',
-          horarios: ['10:00'],
-          alertasAtivos: false,
-        ),
-      ];
-    });
+  // Lê os medicamentos do banco (tabela medicamento)
+  Future<void> _carregarMedicamentos() async {
+    final lista =
+        await ref.read(medicamentoRepositoryProvider).listarMedicamentos();
+    if (!mounted) return;
+    setState(() => medicamentos = lista);
   }
 
   @override
@@ -106,6 +83,7 @@ class _MedicamentoScreenState extends ConsumerState<MedicamentoScreen> {
         isExpanded: _isFabExpanded, // Controla apenas o aparecimento da legenda
         onPressed: () async {
           await Navigator.push(context, RegistroMedicamentoScreen.route());
+          await _carregarMedicamentos();
         },
       ),
     );
@@ -199,6 +177,7 @@ class _MedicamentoScreenState extends ConsumerState<MedicamentoScreen> {
             trailing: Icon(Icons.chevron_right, color: darkText.withValues(alpha: 0.3)),
             onTap: () async {
               await Navigator.push(context, DetalhesMedicamentoScreen.route(med));
+              await _carregarMedicamentos();
             },
           ),
         );

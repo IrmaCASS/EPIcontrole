@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/medicamento_model.dart';
+import 'package:app/providers/medicamento_provider.dart';
 import 'package:app/theme/app_theme.dart';
 
 class RegistroMedicamentoScreen extends ConsumerStatefulWidget {
@@ -98,17 +99,31 @@ class _RegistroMedicamentoScreenState extends ConsumerState<RegistroMedicamentoS
         .map((h) => '${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}')
         .toList();
 
-    /*
-    // TODO BACKEND: Salvar no SQLite usando o Repositório
-    final novoMed = MedicamentoModel(
+    final med = MedicamentoModel(
       idMedicamento: widget.medicamentoExistente?.idMedicamento,
+      idPaciente: widget.medicamentoExistente?.idPaciente ?? 1,
       nome: _nomeController.text.trim(),
-      dosagem: _dosagemController.text.trim(),
+      dosagem: _dosagemController.text.trim().isEmpty
+          ? null
+          : _dosagemController.text.trim(),
       horarios: horariosStrings,
       alertasAtivos: _alertasAtivos,
     );
-    // ...
-    */
+
+    final repo = ref.read(medicamentoRepositoryProvider);
+    try {
+      if (widget.medicamentoExistente == null) {
+        await repo.inserirMedicamento(med);
+      } else {
+        await repo.atualizarMedicamento(med);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao salvar o medicamento: $e')),
+      );
+      return;
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,7 +198,7 @@ class _RegistroMedicamentoScreenState extends ConsumerState<RegistroMedicamentoS
                         _buildSecaoTitulo(Icons.access_alarm, 'Configurar Alertas', corVerde),
                         Switch(
                           value: _alertasAtivos,
-                          activeColor: corVerde,
+                          activeThumbColor: corVerde,
                           onChanged: (val) => setState(() => _alertasAtivos = val),
                         ),
                       ],
