@@ -1,3 +1,5 @@
+// Arquivo: lib/screens/registro_crise_screen.dart
+import 'package:app/models/crise_completa.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/crise_model.dart';
@@ -9,13 +11,16 @@ import 'package:app/providers/registro_crise_provider.dart';
 import 'package:app/models/diario_model.dart';
 
 // ============================================================================
-// WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE
+// WIDGET PRINCIPAL: TELA DE REGISTRO DE CRISE E EDIÇÃO
 // ============================================================================
 class RegistroCriseScreen extends ConsumerStatefulWidget {
-  const RegistroCriseScreen({super.key});
+  final CriseCompleta? criseExistente; // adicionado para permitiri uso da tela para edição
 
-  static Route route() {
-    return MaterialPageRoute(builder: (_) => const RegistroCriseScreen());
+  const RegistroCriseScreen({super.key, this.criseExistente});
+
+  // CORREÇÃO 1: O método route agora espera uma CriseCompleta
+  static Route route({CriseCompleta? crise}) {
+    return MaterialPageRoute(builder: (_) => RegistroCriseScreen(criseExistente: crise));
   }
 
   @override
@@ -27,6 +32,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   // --- Estados do Formulário (Variáveis básicas de tempo e duração) ---
   DateTime _dataSelecionada = DateTime.now();
   TimeOfDay _horaSelecionada = TimeOfDay.now();
+  Future<void>? _carregamentoCatalogosFuture;
 
   // --- Controladores para Duração ---
   final TextEditingController _minutosController = TextEditingController();
@@ -36,11 +42,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   final TextEditingController _outroAvisoController = TextEditingController();
   final TextEditingController _outroGatilhoController = TextEditingController();
   final TextEditingController _outroPosCriseController =
-      TextEditingController();
+  TextEditingController();
 
   final TextEditingController _outroSintomaController = TextEditingController();
   final TextEditingController _outroMedicamentoController =
-      TextEditingController();
+  TextEditingController();
 
   // --- Variáveis que guardam a seleção  (Radio/Dropdown) ---
   String? _atividadeSelecionada;
@@ -61,7 +67,6 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Ausência',
     'Mioclônica',
     'Atônica',
-    'Outro',
   ];
 
   final List<String> avisos = [
@@ -70,18 +75,6 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     'Alteração da visão',
     'Desconforto no estômago',
     'Medo',
-    'Outro',
-  ];
-
-  final List<String> gatilhos = [
-    'Estresse emocional',
-    'Privação de sono',
-    'Esquecimento da medicação',
-    'Luzes piscantes',
-    'Período menstrual',
-    'Febre',
-    'Consumo de álcool',
-    'Exercício intenso',
     'Outro',
   ];
 
@@ -97,8 +90,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   ];
 
   // Opções carregadas do catálogo v4 (populadas no initState).
-  List<String> _sintomasCatalogo = [];
-  List<String> _gatilhosCatalogo = [];
+  // INCLUSÃO: Inicializadas com 'Outro' para garantir que o campo apareça mesmo se o banco estiver vazio.
+  List<String> _sintomasCatalogo = ['Outro'];
+  List<String> _gatilhosCatalogo = ['Outro'];
   List<String> _medicamentosCatalogo = [];
 
   // Guarda os ids do catálogo para vincular nas relações N:N no save.
@@ -115,20 +109,74 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   void initState() {
     super.initState();
 
-    // Pega o tempo da última crise gravada no state do botão de crise
-    final int duracaoSegundos = ref.read(criseProvider).lastCrisisDuration;
+    // ========================================================================
+    // LÓGICA DE EDIÇÃO: Preencher os dados se estiver editando uma crise
+    // ========================================================================
+    _carregamentoCatalogosFuture = _carregarCatalogos();
 
-    if (duracaoSegundos > 0) {
-      // Converte os segundos totais em minutos e segundos restantes
-      final int minutos = duracaoSegundos ~/ 60;
-      final int segundos = duracaoSegundos % 60;
+    if (widget.criseExistente != null) {
+      // CORREÇÃO 2: Desmembrar a CriseCompleta para usar os dados básicos e as listas corretamente
+      final criseCompleta = widget.criseExistente!;
+      final criseBase = criseCompleta.crise;
 
-      // Preenche automaticamente os controladores de texto
-      _minutosController.text = minutos.toString();
-      _segundosController.text = segundos.toString();
+      _dataSelecionada = criseBase.dataHoraInicio;
+      _horaSelecionada = TimeOfDay.fromDateTime(criseBase.dataHoraInicio);
+
+      if (criseBase.duracao != null && criseBase.duracao!.inSeconds > 0) {
+        _minutosController.text = (criseBase.duracao!.inSeconds ~/ 60).toString();
+        _segundosController.text = (criseBase.duracao!.inSeconds % 60).toString();
+      }
+
+      _tipoCriseSelecionado = criseBase.tipoCrise;
+      _atividadeSelecionada = criseBase.atividadeAntesCrise;
+
+      // Restaura as seleções múltiplas separando as strings gravadas no banco
+      _popularSetEOutro(criseBase.prodromosAuras, _avisosSelecionados, _outroAvisoController);
+      _popularSetEOutro(criseBase.desencadeantes, _gatilhosSelecionados, _outroGatilhoController);
+      _popularSetEOutro(criseBase.sintomas, _sintomasSelecionados, _outroSintomaController);
+      _popularSetEOutro(criseBase.estadoPosIctal, _condicoesPosCriseSelecionadas, _outroPosCriseController);
+
+      // Preenche os medicamentos selecionados diretamente da lista real do banco, sem "Outro"
+      for (final med in criseCompleta.medicamentos) {
+        _medicamentosSelecionados.add(med.nome);
+      }
     }
+    // ========================================================================
+    // LÓGICA DE CRIAÇÃO: Buscar dados do Botão de Crise
+    // ========================================================================
+    else {
+      // Pega o tempo da última crise gravada no state do botão de crise
+      final int duracaoSegundos = ref.read(criseProvider).lastCrisisDuration;
+
+      if (duracaoSegundos > 0) {
+        // Converte os segundos totais em minutos e segundos restantes
+        final int minutos = duracaoSegundos ~/ 60;
+        final int segundos = duracaoSegundos % 60;
+
+        // Preenche automaticamente os controladores de texto
+        _minutosController.text = minutos.toString();
+        _segundosController.text = segundos.toString();
+      }
+    }
+
     // Carrega os catálogos de sintomas, gatilhos e medicamentos do banco v4.
     _carregarCatalogos();
+  }
+
+  // --- FUNÇÃO AUXILIAR: Transforma strings do banco (ex: "Febre, Outro (susto)") de volta em seleções visuais
+  void _popularSetEOutro(String? dados, Set<String> selecoes, TextEditingController outroController) {
+    if (dados == null || dados.trim().isEmpty) return;
+
+    final partes = dados.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    for (final p in partes) {
+      if (p.startsWith('Outro (')) {
+        selecoes.add('Outro');
+        // Extrai apenas o que foi digitado pelo usuário e põe de volta no campo de texto
+        outroController.text = p.substring(7, p.length - 1);
+      } else {
+        selecoes.add(p);
+      }
+    }
   }
 
   Future<void> _carregarCatalogos() async {
@@ -137,11 +185,14 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       final sintomas = await diarioRepository.buscarSintomas();
       final gatilhos = await diarioRepository.buscarGatilhos();
       final medicamentos = await diarioRepository.buscarMedicamentos();
+
       if (!mounted) return;
+
       setState(() {
-        _sintomasCatalogo = [for (final s in sintomas) s.nome];
-        _gatilhosCatalogo = [for (final g in gatilhos) g.nome];
+        _sintomasCatalogo = [for (final s in sintomas) s.nome, 'Outro'];
+        _gatilhosCatalogo = [for (final g in gatilhos) g.nome, 'Outro'];
         _medicamentosCatalogo = [for (final m in medicamentos) m.nome];
+
         _sintomasIds = {for (final s in sintomas) s.nome: s.idSintoma!};
         _gatilhosIds = {for (final g in gatilhos) g.nome: g.idGatilho!};
         _medicamentosIds = {
@@ -149,7 +200,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
         };
       });
     } catch (_) {
-      // Sem catálogo disponível, a tela segue com as listas vazias.
+      // Sem catálogo disponível, a tela segue com as listas apenas com 'Outro'
     }
   }
 
@@ -170,9 +221,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
   // Se a pessoa marcou várias coisas e a opção "Outro" também, ele anexa o que
   // foi digitado no TextField (Ex: "Aura, Medo, Outro (Cheiro forte)").
   String _prepararStringSelecoes(
-    Set<String> selecoes,
-    TextEditingController controller,
-  ) {
+      Set<String> selecoes,
+      TextEditingController controller,
+      ) {
     List<String> finalSelecoes = selecoes.where((e) => e != 'Outro').toList();
     if (selecoes.contains('Outro')) {
       if (controller.text.trim().isNotEmpty) {
@@ -184,8 +235,13 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
     return finalSelecoes.join(', '); // Retorna uma string separada por vírgulas
   }
 
-  // --- FUNÇÃO PRINCIPAL: Salvar o Registro ---
+  // --- FUNÇÃO PRINCIPAL: Salvar ou Atualizar o Registro ---
   Future<void> _salvarRegistro() async {
+    // Garante que o catálogo terminou de carregar os IDs antes de tentar vincular
+    if (_carregamentoCatalogosFuture != null) {
+      await _carregamentoCatalogosFuture;
+    }
+
     try {
       final dataInicio = DateTime(
         _dataSelecionada.year,
@@ -200,6 +256,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
       final int totalSegundos = (minutos * 60) + segundos;
 
       final novaCrise = CriseModel(
+        // CORREÇÃO 3: Referenciando o caminho correto da classe base para os IDs
+        idCrise: widget.criseExistente?.crise.idCrise, // Mantém o ID original na edição!
+        idPaciente: widget.criseExistente?.crise.idPaciente ?? 1,
         dataHoraInicio: dataInicio,
         duracao: Duration(seconds: totalSegundos),
         tipoCrise: _tipoCriseSelecionado,
@@ -216,64 +275,92 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
           _condicoesPosCriseSelecionadas,
           _outroPosCriseController,
         ),
+        // Adicionando a persistência na model da string de sintomas (se implementada assim)
+        sintomas: _prepararStringSelecoes(
+          _sintomasSelecionados,
+          _outroSintomaController,
+        ),
       );
 
       final criseRepository = ref.read(criseRepositoryProvider);
       final diarioRepository = ref.read(diarioRepositoryProvider);
 
-      final idCrise = await criseRepository.inserirCrise(novaCrise);
+      // ====================================================================
+      // LÓGICA DE INSERÇÃO (Nova Crise)
+      // ====================================================================
+      if (widget.criseExistente == null) {
+        final idCrise = await criseRepository.inserirCrise(novaCrise);
 
-      // 2) Vincula o catálogo N:N na crise (Sintomas / Gatilhos / Medicamentos)
-      for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
-        final id = _sintomasIds[nome];
-        if (id != null) {
-          await diarioRepository.vincularSintomaACrise(idCrise, id);
+        // Vincula o catálogo N:N na crise (Sintomas / Gatilhos / Medicamentos)
+        for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
+          final id = _sintomasIds[nome];
+          if (id != null) await diarioRepository.vincularSintomaACrise(idCrise, id);
+        }
+        for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
+          final id = _gatilhosIds[nome];
+          if (id != null) await diarioRepository.vincularGatilhoACrise(idCrise, id);
+        }
+        for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
+          final id = _medicamentosIds[nome];
+          if (id != null) await diarioRepository.vincularMedicamentoACrise(idCrise, id);
+        }
+
+        // Cria a entrada do diário correspondente
+        final idsSintomas = _sintomasSelecionados.where((e) => e != 'Outro').map((e) => _sintomasIds[e]).whereType<int>().toList();
+        final idsGatilhos = _gatilhosSelecionados.where((e) => e != 'Outro').map((e) => _gatilhosIds[e]).whereType<int>().toList();
+
+        final novoDiario = DiarioModel(
+          idPaciente: novaCrise.idPaciente,
+          dataHora: dataInicio,
+          anotacoes: _condicoesPosCriseSelecionadas.join(', '),
+        );
+        await diarioRepository.inserirDiarioComRelacoes(
+          novoDiario,
+          idsSintomas: idsSintomas,
+          idsGatilhos: idsGatilhos,
+        );
+      }
+      // ====================================================================
+      // LÓGICA DE ATUALIZAÇÃO (Editando Crise)
+      // ====================================================================
+      else {
+        await criseRepository.atualizarCrise(novaCrise);
+        final idCrise = novaCrise.idCrise!;
+
+        // Remove os vínculos antigos antes de regravar os que estão marcados agora
+        await diarioRepository.limparVinculosDaCrise(idCrise);
+
+        // Mesmo código de vínculo do bloco de criação (if) logo acima
+        for (final nome in _sintomasSelecionados.where((e) => e != 'Outro')) {
+          final id = _sintomasIds[nome];
+          if (id != null) await diarioRepository.vincularSintomaACrise(idCrise, id);
+        }
+        for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
+          final id = _gatilhosIds[nome];
+          if (id != null) await diarioRepository.vincularGatilhoACrise(idCrise, id);
+        }
+        for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
+          final id = _medicamentosIds[nome];
+          if (id != null) await diarioRepository.vincularMedicamentoACrise(idCrise, id);
         }
       }
-      for (final nome in _gatilhosSelecionados.where((e) => e != 'Outro')) {
-        final id = _gatilhosIds[nome];
-        if (id != null) {
-          await diarioRepository.vincularGatilhoACrise(idCrise, id);
-        }
-      }
-      for (final nome in _medicamentosSelecionados.where((e) => e != 'Outro')) {
-        final id = _medicamentosIds[nome];
-        if (id != null) {
-          await diarioRepository.vincularMedicamentoACrise(idCrise, id);
-        }
-      }
-
-      // 3) Cria a entrada do diário com os MESMOS sintomas e gatilhos (N:N)
-      final idsSintomas = _sintomasSelecionados
-          .where((e) => e != 'Outro')
-          .map((e) => _sintomasIds[e])
-          .whereType<int>()
-          .toList();
-      final idsGatilhos = _gatilhosSelecionados
-          .where((e) => e != 'Outro')
-          .map((e) => _gatilhosIds[e])
-          .whereType<int>()
-          .toList();
-
-      final novoDiario = DiarioModel(
-        idPaciente: novaCrise.idPaciente,
-        dataHora: dataInicio,
-        anotacoes: _condicoesPosCriseSelecionadas.join(', '),
-      );
-      final idDiario = await diarioRepository.inserirDiarioComRelacoes(
-        novoDiario,
-        idsSintomas: idsSintomas,
-        idsGatilhos: idsGatilhos,
-      );
 
       if (!mounted) return;
-      // Avisa a tela de Diário que um novo registro foi salvo
+
+      // Avisa a tela de Diário que um registro foi alterado/salvo
       refreshDiarioNotifier.value++;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Crise registrada e vinculada ao diário')),
+        SnackBar(
+            content: Text(
+                widget.criseExistente == null
+                    ? 'Crise registrada e vinculada ao diário'
+                    : 'Crise atualizada com sucesso!'
+            )
+        ),
       );
       Navigator.pop(context);
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -298,7 +385,8 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Registro de Crise',
+              // Muda o título da página dinamicamente
+              widget.criseExistente == null ? 'Registro de Crise' : 'Editar Crise',
               style: TextStyle(
                 color: darkText,
                 fontWeight: FontWeight.w900,
@@ -306,9 +394,11 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Selecione as informações da sua crise',
-              style: TextStyle(
+            Text(
+              widget.criseExistente == null
+                  ? 'Selecione as informações da sua crise'
+                  : 'Modifique as informações necessárias',
+              style: const TextStyle(
                 color: Color(0xFF5B3089),
                 fontSize: 14,
                 fontWeight: FontWeight.normal,
@@ -389,7 +479,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- BOTÃO DE SALVAR ---
+            // --- BOTÃO DE SALVAR / ATUALIZAR ---
             ElevatedButton(
               onPressed: _salvarRegistro,
               style: ElevatedButton.styleFrom(
@@ -399,9 +489,9 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'SALVAR REGISTRO',
-                style: TextStyle(
+              child: Text(
+                widget.criseExistente == null ? 'SALVAR REGISTRO' : 'ATUALIZAR REGISTRO',
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -467,7 +557,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                   child: _buildSeletorFalso(
                     label: 'Data',
                     valor:
-                        '${_dataSelecionada.day.toString().padLeft(2, '0')}/${_dataSelecionada.month.toString().padLeft(2, '0')}/${_dataSelecionada.year}',
+                    '${_dataSelecionada.day.toString().padLeft(2, '0')}/${_dataSelecionada.month.toString().padLeft(2, '0')}/${_dataSelecionada.year}',
                     icone: Icons.calendar_month,
                     onTap: () async {
                       // Abre o calendário nativo do sistema
@@ -486,7 +576,7 @@ class _RegistroCriseScreenState extends ConsumerState<RegistroCriseScreen> {
                   child: _buildSeletorFalso(
                     label: 'Horário',
                     valor:
-                        '${_horaSelecionada.hour.toString().padLeft(2, '0')}:${_horaSelecionada.minute.toString().padLeft(2, '0')}',
+                    '${_horaSelecionada.hour.toString().padLeft(2, '0')}:${_horaSelecionada.minute.toString().padLeft(2, '0')}',
                     icone: Icons.access_time,
                     onTap: () async {
                       // Abre o relógio nativo do sistema
@@ -712,9 +802,9 @@ class _NumericalRangeFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
     if (newValue.text.isEmpty) {
       return newValue;
     }

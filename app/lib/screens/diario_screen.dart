@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:app/models/crise_model.dart';
+import 'package:app/models/crise_completa.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/widgets/empty_state_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/providers/registro_crise_provider.dart';
+import 'package:app/screens/detalhes_crise_screen.dart';
 
 // ============================================================================
 // WIDGET PRINCIPAL: TELA DE DIÁRIO DE CRISES
@@ -81,6 +83,7 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
         .toList();
   }
 
+  //TODO mock de medicamnetos a ser removido
   List<String> _getMedicamentosParaDia(DateTime dia) {
     final hoje = DateTime.now();
     if (isSameDay(dia, hoje) ||
@@ -361,7 +364,29 @@ class _DiarioScreenState extends ConsumerState<DiarioScreen> {
         Icons.chevron_right,
         color: darkText.withValues(alpha: 0.4),
       ),
-      onTap: () {},
+      onTap: () async {
+        //  Navega para a tela de Detalhamento
+        try {
+          if (crise.idCrise == null) return;
+          // Busca a crise com todos os relacionamentos N:N (Catálogos)
+          final criseCompleta = await ref.read(diarioRepositoryProvider).buscarCriseCompleta(crise.idCrise!);
+
+          if (criseCompleta != null && mounted) {
+            // Se encontrar com sucesso, abre a tela de detalhes com os dados completos
+             Navigator.of(context).push(DetalhesCriseScreen.route(criseCompleta));
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Detalhes não encontrados.')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao carregar detalhes: $e')),
+            );
+          }
+        }
+      },
     );
   }
 
