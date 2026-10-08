@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/models/medicamento_model.dart';
+import 'package:app/providers/medicamento_provider.dart';
 import 'package:app/theme/app_theme.dart';
 import 'package:app/widgets/custom_floating_button.dart';
 import 'package:app/screens/registro_medicamento_screen.dart';
@@ -40,7 +41,19 @@ class _DetalhesMedicamentoScreenState extends ConsumerState<DetalhesMedicamentoS
     );
 
     if (confirmar == true) {
-      // TODO BACKEND: await ref.read(medicamentoRepositoryProvider).excluir(widget.medicamento.idMedicamento!);
+      final id = widget.medicamento.idMedicamento;
+      if (id == null) return;
+
+      try {
+        await ref.read(medicamentoRepositoryProvider).excluirMedicamento(id);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir o medicamento: $e')),
+        );
+        return;
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medicamento excluído!')));
         Navigator.pop(context, true); // Retorna true para a tela anterior atualizar a lista
