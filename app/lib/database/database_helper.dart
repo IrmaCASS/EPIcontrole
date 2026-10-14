@@ -25,7 +25,9 @@ class DatabaseHelper {
   // v3 = Sprint 3 (Contatos de Emergência: + tabela contato_emergencia)
   // v4 = Diário de Crises (entidade própria): catálogos de sintomas,
   //      gatilhos e medicamentos + relações N:N com diario e crise.
-  static const int _dbVersion = 4;
+  // v5 = Medicamentos do paciente (medicamento + registro_dose) e
+  //      Bloco de Notas (bloco_notas).
+  static const int _dbVersion = 5;
   static const String _dbFileName = 'epicontrole.db';
 
   Future<Database> get database async {
@@ -72,6 +74,11 @@ class DatabaseHelper {
     await db.execute(AppDatabaseTables.idxCriseSintomaSintoma);
     await db.execute(AppDatabaseTables.idxCriseGatilhoGatilho);
     await db.execute(AppDatabaseTables.idxCriseMedicamentoCatalogo);
+
+    // v5: medicamento vem antes de registro_dose (a FK aponta pra ele).
+    await db.execute(AppDatabaseTables.medicamento);
+    await db.execute(AppDatabaseTables.registroDose);
+    await db.execute(AppDatabaseTables.blocoNotas);
 
     // Paciente local único (v1 = app sem login/nuvem, RNF06).
     // Importante: usa o datetime() do próprio SQLite.

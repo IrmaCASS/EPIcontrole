@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:app/screens/registro_crise_screen.dart';
+import 'package:app/services/discador_emergencia_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/providers/botao_crise_provider.dart';
@@ -21,6 +23,18 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
   // Controla o "flash" em Branco Acinzentado (fade out) aplicado ao apertar o botão.
   bool _flashWhite = false;
 
+  // Serviço que abre o discador nativo com o telefone do contato principal.
+  final DiscadorEmergenciaService _discadorService =
+      DiscadorEmergenciaService();
+
+  // Timer que dispara o discador 5 segundos após o início da crise.
+  Timer? _discadorTimer;
+
+  // Tempo mínimo (em segundos) para que a crise seja considerada válida
+  // e a tela de registro seja aberta. Toques acidentais abaixo desse valor
+  // são ignorados.
+  static const int _minDurationToRegister = 5;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +46,7 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
 
   @override
   void dispose() {
+    _discadorTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -47,11 +62,30 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
 
   // Ação de clique: aplica o fade out (flash branco), inverte o estado do provider
   // e devolve o botão à opacidade normal.
+  // Se a crise FOI INICIADA, agenda o discador para 5 segundos depois.
+  // Se a crise FOI ENCERRADA, cancela o timer do discador.
   Future<void> _handleTap() async {
     setState(() => _flashWhite = true);
     await Future<void>.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
+
+    final estavaAtiva = ref.read(criseProvider).isActive;
     ref.read(criseProvider.notifier).toggleCrise();
+
+    if (!estavaAtiva) {
+      // Crise foi INICIADA: agenda o discador para daqui a 5 segundos.
+      _discadorTimer?.cancel();
+      _discadorTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          _discadorService.abrirDiscador();
+        }
+      });
+    } else {
+      // Crise foi ENCERRADA: cancela o timer (não abre o discador).
+      _discadorTimer?.cancel();
+      _discadorTimer = null;
+    }
+
     setState(() => _flashWhite = false);
   }
 
@@ -92,13 +126,20 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
     final secondsElapsed = criseState.secondsElapsed;
 
     // Ao encerrar a crise (manual ou pelo limite de 5 minutos), navega direto
-    // para o Diário de Crises.
+    // para o Diário de Crises — mas APENAS se a crise durou tempo suficiente
+    // para ser considerada um registro válido (>= 5 segundos).
+    // Toques acidentais abaixo de 5s são ignorados e nada é aberto.
     ref.listen(criseProvider, (previous, next) {
       if (previous != null && previous.isActive && !next.isActive) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          Navigator.of(context).push(RegistroCriseScreen.route());
-        });
+        _discadorTimer?.cancel();
+        _discadorTimer = null;
+
+        if (next.lastCrisisDuration >= _minDurationToRegister) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.of(context).push(RegistroCriseScreen.route());
+          });
+        }
       }
     });
 
@@ -328,8 +369,7 @@ class _BotaoDeCriseState extends ConsumerState<BotaoDeCrise>
         if (isCrisisActive)
           const Text(
             'Cronômetro ativo — ao encerrar, os dados serão salvos no Diário de Crises',
-            textAlign: TextAlign
-                .center, // Centraliza o texto caso ele quebre em duas linhas.
+            textAlign: TextAlign.center,
             style: TextStyle(color: AppTheme.kRoxoEscuro, fontSize: 14),
           ),
       ],

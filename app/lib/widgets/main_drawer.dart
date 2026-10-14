@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:app/screens/mock_screen.dart';
-import 'package:app/screens/diario_screen.dart';
+import 'package:app/screens/configuracoes_screen.dart';
 import 'package:app/screens/registro_crise_screen.dart';
 
 /// Widget separado para o Menu Lateral (Drawer)
-/// Contém as opções das telas principais; todas levam para páginas de mock
-/// (em branco) até que a lógica de negócio seja implementada.
+/// Contém as opções das telas principais; algumas já têm telas reais,
+/// outras ainda levam para páginas de mock (em branco).
 class MainDrawer extends StatelessWidget {
   // Callback acionado pela opção "Início", para navegar à aba do Botão de
   // Crise da mesma forma que o NavBar.
@@ -58,7 +58,8 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.app_registration),
             title: const Text('Registrar Nova Crise'),
-            onTap: () => Navigator.of(context).push(RegistroCriseScreen.route()),
+            onTap: () =>
+                Navigator.of(context).push(RegistroCriseScreen.route()),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
@@ -68,7 +69,14 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('Configurações'),
-            onTap: () => _navigateToMock(context, 'Configurações'),
+            onTap: () {
+              Navigator.pop(context); // Fecha o drawer
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ConfiguracoesScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),

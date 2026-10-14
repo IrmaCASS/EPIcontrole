@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app/models/crise_model.dart';
-import 'package:app/repositories/crise_repository.dart';
 
 // Classe de Estado: Guarda as variáveis que a tela precisa ler
 class CriseState {
@@ -28,11 +26,10 @@ class CriseState {
   }
 }
 
-// Notifier: Contém a lógica de negócio (Cronômetro, Salvar DB, SMS)
+// Notifier: Contém apenas a lógica do cronômetro.
+// A persistência no banco é responsabilidade da tela de Registro de Crise.
 class CriseNotifier extends Notifier<CriseState> {
   Timer? _timer;
-
-  final _criseRepository = CriseRepository();
 
   // Tempo limite de segurança de 5 minutos (300 segundos)
   final int _maxCrisisDuration = 300;
@@ -66,30 +63,17 @@ class CriseNotifier extends Notifier<CriseState> {
     });
   }
 
-  Future<void> _stopCrisis() async {
+  void _stopCrisis() {
     _timer?.cancel();
 
     final duracaoFinal = state.secondsElapsed;
 
     // TODO: Parar a reprodução do AudioService
 
-    // Salva a crise no banco (só se durou pelo menos 1 segundo)
-    if (duracaoFinal > 0) {
-      try {
-        final novaCrise = CriseModel(
-          dataHoraInicio: DateTime.now().subtract(
-            Duration(seconds: duracaoFinal),
-          ),
-          duracao: Duration(seconds: duracaoFinal),
-        );
-        await _criseRepository.inserirCrise(novaCrise);
-      } catch (e) {
-        // Se der erro no banco, não deixa o app travar
-        // ignore: avoid_print
-        print('Erro ao salvar crise: $e');
-      }
-    }
-
+    // NÃO salva nada no banco aqui. Apenas guarda a duração final no state,
+    // para que a tela de Registro de Crise possa pré-preencher o formulário.
+    // O salvamento real (INSERT) é feito quando o usuário clicar em
+    // "SALVAR REGISTRO" na tela de RegistroCriseScreen.
     state = state.copyWith(
       isActive: false,
       secondsElapsed: 0,
