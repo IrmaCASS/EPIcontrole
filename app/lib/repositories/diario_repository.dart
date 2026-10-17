@@ -73,6 +73,15 @@ class DiarioRepository {
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
+  Future<void> limparVinculosDaCrise(int idCrise) async {
+    final db = await _databaseProvider();
+    final batch = db.batch();
+    batch.delete('crise_sintoma', where: 'id_crise = ?', whereArgs: [idCrise]);
+    batch.delete('crise_gatilho', where: 'id_crise = ?', whereArgs: [idCrise]);
+    batch.delete('crise_medicamento', where: 'id_crise = ?', whereArgs: [idCrise]);
+    await batch.commit(noResult: true);
+  }
+
   /// Converte uma CriseModel em DiarioModel para exibição unificada
   /// na tela do Diário de Crises.
   DiarioModel _criseParaDiario(CriseModel crise) {
